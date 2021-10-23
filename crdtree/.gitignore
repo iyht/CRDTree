@@ -1,0 +1,12 @@
+# MACOS garbage
+.DS_Store
+
+# Ignore TS output
+dist
+
+# Normal stuff
+node_modules
+.env
+*~
+*.log
+
