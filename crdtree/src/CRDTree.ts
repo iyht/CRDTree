@@ -2,7 +2,7 @@ type CRDTreeTransport<T> = unknown; // used for sending updates across the netwo
 type ID = unknown;
 type Index = number | string;
 
-interface CRDTree<T> {
+interface CRDTree<T = any> {
 	new (intialState: T): CRDTree<T>;
 	new (from: CRDTreeTransport<T>): CRDTree<T>;
 
@@ -12,11 +12,8 @@ interface CRDTree<T> {
 	// returns affected forks, throws DifferentForkException
 	merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[];
 
-	// update(state: Partial<T>): void; // To delete something, set it to undefined
-
-	// Maybe instead of detecting the kinds of changes
-	// restrict the kinds of changes
-	append<U>(indices: Index[], item: U): void;
+	assign<U = any>(indices: Index[], item: U): void;
+	insert<U = any>(indices: [...Index[], number], item: U): void;
 	delete(indices: Index[]): void;
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void);
