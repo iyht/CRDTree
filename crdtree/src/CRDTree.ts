@@ -26,6 +26,8 @@ export interface ICRDTree<T = any> {
 }
 
 export class CRDTree<T = any> implements ICRDTree<T> {
+	constructor(private from: CRDTreeTransport<T> = []) {}
+
 	assign<U = any>(indices: Index[], item: U): void {
 		return;
 	}
