@@ -35,9 +35,29 @@ describe("CRDTree", () => {
 				crdt.assign([], {});
 				expect(crdt).to.render({});
 			});
+
+			it("should be able to assign to sub-objects", () => {
+				crdt.assign([], {});
+				crdt.assign(["foo"], []);
+				crdt.insert(["foo", -1], 10);
+				expect(crdt).to.render({foo: [10]});
+				crdt.assign(["foo", 0], 40);
+				expect(crdt).to.render({foo: [40]});
+			});
+
+			it("should support insertion", () => {
+				crdt.assign([], []);
+				crdt.insert([-1], 1);
+				crdt.insert([0], 2);
+				crdt.insert([1], 3);
+				crdt.insert([-1], 4);
+				crdt.insert([1], 5);
+				expect(crdt).to.render([4, 1, 5, 2, 3]);
+			});
 		});
 
 		describe("merge", () => {
+			// This is a whitebox test I think. Requires understanding of what the transport will look like
 			it("should handle an update for a list it hasn't gotten an assignment for yet");
 		});
 
