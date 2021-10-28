@@ -1,79 +1,71 @@
 import {expect} from "chai";
 import {Done} from "mocha";
-import {CRDTree, ICRDTree} from "../src/CRDTree";
-import "./util/utils";
 
 describe("CRDTree", () => {
 
 	describe("CRDT", () => {
-		let crdt: ICRDTree;
-
-		beforeEach(() => crdt = new CRDTree());
 
 		describe("assign/insert/render", () => {
-			it("should be able to render a new crdt", () =>
-				expect(crdt).to.render(null));
 
-			it("should be able to assign a primitive", () => {
-				crdt.assign([], true);
-				expect(crdt).to.render(true);
-			});
+		});
 
-			it("should be able to reassign a primitive", () => {
-				[false, 10, "foo", null].forEach((primitive) => {
-					crdt.assign([], primitive);
-					expect(crdt).to.render(primitive);
-				});
-			});
+		// Local operations
+		describe("insert", () => {
+		});
 
-			it("should be able to assign an array", () => {
-				crdt.assign([], []);
-				expect(crdt).to.render([]);
-			});
+		describe("delete", () => {
+		});
 
-			it("should be able to assign an object", () => {
-				crdt.assign([], {});
-				expect(crdt).to.render({});
-			});
-
-			it("should be able to assign to sub-objects", () => {
-				crdt.assign([], {});
-				crdt.assign(["foo"], []);
-				crdt.insert(["foo", -1], 10);
-				expect(crdt).to.render({foo: [10]});
-				crdt.assign(["foo", 0], 40);
-				expect(crdt).to.render({foo: [40]});
-			});
-
-			it("should support insertion", () => {
-				crdt.assign([], []);
-				crdt.insert([-1], 1);
-				crdt.insert([0], 2);
-				crdt.insert([1], 3);
-				crdt.insert([-1], 4);
-				crdt.insert([1], 5);
-				expect(crdt).to.render([4, 1, 5, 2, 3]);
+		// Concurrent operations merging testing
+		describe("Concurrent local insertion", () => {
+			it("should show merge two CRDTs with local insertion, both insertion should be contained in the merged CRDT", (done) => {
+				done(); // TODO
 			});
 		});
 
-		describe("merge", () => {
-			// This is a whitebox test I think. Requires understanding of what the transport will look like
-			it("should handle an update for a list it hasn't gotten an assignment for yet");
+		describe("Concurrent local deletion on the same object", () => {
+			it("should show merge two CRDTs with local deletion on the same objecl. We should see only one deletion should be performed in the merged CRDT", (done) => {
+				done(); // TODO
+			});
+		});
+
+		// History
+		describe("Basic local history record", () => {
+			it("should show all the local operations are recorded in the history", (done) => {
+				done(); // TODO
+			});
+		});
+
+		describe("fork => do something on the fork", () => {
+			it(" should show fork copy all the history from main. New operation should be continually recorded on the fork's history", (done) => {
+				done(); // TODO
+			});
+		});
+
+		describe("fork => do something on the fork => do something on main", () => {
+			it(" should show both main and fork have their own history record. New operation after forking will not affect on history for each other.", (done) => {
+				done(); // TODO
+			});
+		});
+
+		describe("fork => do something on the fork => do something on main => join fork back into main", () => {
+			it("should show the main have every history it has before as well as the joined history of fork", (done) => {
+				done(); // TODO
+			});
 		});
 
 		describe("clone", () => {
-			it("should be possible to clone a crdt");
+
 		});
 
 		describe("onUpdate", () => {
-			it("should eventually call onUpdate", (done: Done) => {
-				const crdt: ICRDTree = new CRDTree();
-				crdt.onUpdate((update) => {
-					expect(update).to.exist; // TODO need more information than this
-					done();
-				});
-				crdt.assign([], "foo");
+			it("should eventually call onUpdate", (done) => {
+				done(); // TODO
 			});
 		});
 	});
 });
+
+
+
+
