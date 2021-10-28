@@ -67,7 +67,12 @@ describe("CRDTree", () => {
 
 		describe("onUpdate", () => {
 			it("should eventually call onUpdate", (done: Done) => {
-				done(); // TODO
+				const crdt: ICRDTree = new CRDTree();
+				crdt.onUpdate((update) => {
+					expect(update).to.exist; // TODO need more information than this
+					done();
+				});
+				crdt.assign([], "foo");
 			});
 		});
 	});
