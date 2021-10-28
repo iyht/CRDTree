@@ -3,8 +3,8 @@ type ID = unknown;
 type Index = number | string;
 
 interface CRDTree<T = any> {
-	new (intialState: T): CRDTree<T>;
-	new (from: CRDTreeTransport<T>): CRDTree<T>;
+	// new (intialState: T): CRDTree<T>;
+	// new (from: CRDTreeTransport<T>): CRDTree<T>;
 
 	render(): T;
 
