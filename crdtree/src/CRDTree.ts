@@ -2,13 +2,13 @@ type CRDTreeTransport<T> = unknown; // used for sending updates across the netwo
 type ID = unknown;
 type Index = number | string;
 
-interface CRDTree<T = any> {
+export interface ICRDTree<T = any> {
 	// new (intialState: T): CRDTree<T>;
 	// new (from: CRDTreeTransport<T>): CRDTree<T>;
 
 	render(): T;
 
-	clone(): CRDTreeTransport<T>; // for when a new node joins the network
+	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
 	// returns affected forks, throws DifferentForkException
 	merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[];
 
@@ -23,4 +23,54 @@ interface CRDTree<T = any> {
 	fork(): ID;
 	join(ref: ID): void; // throws UnrelatedHistoryException (same fork is a no-op)
 	checkout(ref: ID): void;
+}
+
+export class CRDTree<T = any> implements ICRDTree<T> {
+	assign<U = any>(indices: Index[], item: U): void {
+		return;
+	}
+
+	checkout(ref: ID): void {
+		return;
+	}
+
+	serialize(): CRDTreeTransport<T> {
+		return undefined;
+	}
+
+	delete(indices: Index[]): void {
+		return;
+	}
+
+	fork(): ID {
+		return undefined;
+	}
+
+	insert<U = any>(indices: [...Index[], number], item: U): void {
+	}
+
+	join(ref: ID): void {
+		return;
+	}
+
+	listRefs(): ID[] {
+		return [];
+	}
+
+	merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
+		return [];
+	}
+
+	onUpdate(callback: (update: CRDTreeTransport<T>) => void) {
+		return;
+	}
+
+	ref(): ID {
+		return undefined;
+	}
+
+	render(): T {
+		return undefined;
+	}
+
 }
