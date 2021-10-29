@@ -1,4 +1,4 @@
-type CRDTreeTransport<T> = unknown; // used for sending updates across the network
+type CRDTreeTransport<T> = unknown[]; // used for sending updates across the network
 type ID = unknown;
 type Index = number | string;
 
@@ -10,7 +10,7 @@ export interface ICRDTree<T = any> {
 
 	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
 	// returns affected forks, throws DifferentForkException
-	merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[];
+	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): ID[];
 
 	assign<U = any>(indices: Index[], item: U): void;
 	insert<U = any>(indices: [...Index[], number], item: U): void;
@@ -26,9 +26,14 @@ export interface ICRDTree<T = any> {
 }
 
 export class CRDTree<T = any> implements ICRDTree<T> {
-	constructor(private from: CRDTreeTransport<T> = []) {}
+	private callback;
+
+	constructor(from: CRDTreeTransport<T> = []) {
+		// TODO
+	}
 
 	assign<U = any>(indices: Index[], item: U): void {
+		this.callback && setTimeout(this.callback);
 		return;
 	}
 
@@ -64,6 +69,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void) {
+		this.callback = callback;
 		return;
 	}
 
