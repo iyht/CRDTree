@@ -1,4 +1,5 @@
 import {ICRDTree} from "../../src/CRDTree";
+import * as chai from "chai";
 
 chai.Assertion.addMethod('render', function (expectedRender) {
 	const crdt: ICRDTree = this._obj;

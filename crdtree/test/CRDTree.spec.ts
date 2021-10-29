@@ -64,20 +64,23 @@ describe("CRDTree", () => {
 			});
 
 			it("should not allow complex object assignment", () => {
-				expect(() => crdt.assign([], {foo: 69})).to.throw;
-				expect(() => crdt.assign([], [420])).to.throw;
+				expect(() => crdt.assign([], {foo: 69})).to.throw(Error);
+				expect(() => crdt.assign([], [420])).to.throw(Error);
 			});
-
-			it("should not allow complex object insertion");
 		});
 
 		describe("clone", () => {
-			it("should be possible to clone a crdt");
+			it("should be possible to clone a crdt", () => {
+				crdt.assign([], {});
+				crdt.assign(["bar"], {});
+				const newCrdt = new CRDTree(crdt.serialize());
+				expect(newCrdt).to.render({bar: {}});
+			});
 		});
 
 		describe("merge", () => {
-			let crdtA: CRDTree;
-			let crdtB: CRDTree;
+			let crdtA: ICRDTree;
+			let crdtB: ICRDTree;
 
 			beforeEach(() => {
 				crdtA = new CRDTree();
@@ -124,7 +127,29 @@ describe("CRDTree", () => {
 			// This is a whitebox test I think. Requires understanding of what the transport will look like
 			it("should handle an update for a list it hasn't gotten an assignment for yet");
 
-			describe("conflicting assignment");
+			describe("conflicting assignment", () => {
+				it("should be fine if two processes assign the same value to the same variable" , () => {
+					crdtA.assign(["foo"], "bar");
+					crdtB.assign(["foo"], "bar");
+					expect(crdtA).to.merge(crdtB).as({foo: "bar"});
+				});
+
+				it("should pick a winner from concurrent assignment of different primitive values", () => {
+					crdtA.assign([], 10);
+					crdtB.assign([], -10);
+					expect(crdtA).to.merge(crdtB);
+					// .as(10); OR .as(-10); // TODO some total ordering thingy
+				});
+
+				it("should discard more than a single concurrent change", () => {
+					crdtA.assign([], {});
+					crdtB.assign([], {});
+					crdtA.assign(["foo"], 10);
+					crdtB.assign(["bar"], 20);
+					expect(crdtA).to.merge(crdtB);
+					// .as({foo: 10}); OR .as({bar: 20}); // TODO some total ordering algorithm
+				});
+			});
 		});
 
 		describe("onUpdate", () => {
