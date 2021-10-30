@@ -1,4 +1,4 @@
-type CRDTreeTransport<T> = unknown; // used for sending updates across the network
+export type CRDTreeTransport<T> = unknown; // used for sending updates across the network
 type ID = unknown;
 type Index = number | string;
 
