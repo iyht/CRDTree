@@ -17,7 +17,7 @@ export interface INetwork<T = any> {
 	send(update: CRDTreeTransport<T>): void;
 
 	// when receiving an update, calls callback to let CRDTree handle it
-	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
+	onRecv(callback: (update: CRDTreeTransport<T>) => void): void;
 }
 
 export class RootNetwork<T = any> implements INetwork<T> {
@@ -37,7 +37,7 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		return;
 	}
 
-	onUpdate(callback: <T>(update: CRDTreeTransport<T>) => void): void {
+	onRecv(callback: <T>(update: CRDTreeTransport<T>) => void): void {
 		return;
 	}
 }
