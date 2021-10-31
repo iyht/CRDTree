@@ -15,6 +15,7 @@ export interface ICRDTree<T = any> {
 	assign<U = any>(indices: Index[], item: U): void;
 	insert<U = any>(indices: [...Index[], number], item: U): void;
 	delete(indices: Index[]): void;
+	noop(): void; // useful when we add commit messages
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void);
 
@@ -66,6 +67,10 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
 		return [];
+	}
+
+	noop() {
+		return;
 	}
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void) {

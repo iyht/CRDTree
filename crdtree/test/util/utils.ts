@@ -23,6 +23,10 @@ chai.Assertion.addMethod('as', function (expectedRender) {
 	new chai.Assertion(this._obj).render(expectedRender);
 });
 
+chai.Assertion.addMethod('asOneOf', function (expectedRenderA, expectedRenderB) {
+	new chai.Assertion([expectedRenderA, expectedRenderB], "No valid render").to.deep.include(this._obj);
+});
+
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-namespace
 	export namespace Chai {
@@ -31,6 +35,7 @@ declare global {
 			renderEqual(remote: ICRDTree): Assertion;
 			merge(remote: ICRDTree): Assertion;
 			as(val: any): Assertion;
+			asOneOf(valA: any, valB: any): Assertion;
 		}
 	}
 }
