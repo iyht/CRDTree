@@ -169,6 +169,11 @@ describe("CRDTree", () => {
 				crdtB = new CRDTree(crdtA.serialize());
 			});
 
+			it("should be able to merge into self as a no-op", () => {
+				crdtA.merge(crdtA);
+				expect(crdtA).to.render({});
+			});
+
 			it("should be able to merge in remote changes", () => {
 				crdtA.assign([], []);
 				crdtB.merge(crdtA);
@@ -511,6 +516,167 @@ describe("CRDTree", () => {
 					done();
 				});
 				crdt.assign([], "foo");
+			});
+		});
+	});
+
+	describe("CRDTree", () => {
+
+		describe("fork and join", () => {
+			let tree: ICRDTree;
+
+			beforeEach(() => tree = new CRDTree());
+
+			it("should have a ref for the default branch", () =>
+				expect(tree.ref()).to.exist);
+
+			it("should always use the same default ref", () => {
+				expect(new CRDTree()).to.be.on(tree.ref());
+			});
+
+			it("should be able to fork", () => {
+				const ref = tree.fork();
+				expect(ref).to.exist;
+				expect(tree).to.be.on(ref);
+			});
+
+			it("should preserve changes from before the fork", () => {
+				tree.assign([], "change");
+				tree.fork();
+				expect(tree).to.render("change");
+			});
+
+			it("should be able to check out an existing branch using a ref", () => {
+				const main = tree.ref();
+				tree.assign([], {});
+				expect(tree).to.render({});
+				const feature = tree.fork();
+				expect(tree).to.render({});
+				tree.assign(["foo"], "change");
+				expect(tree).to.render({foo: "change"});
+				tree.checkout(main);
+				expect(tree).to.render({});
+				tree.checkout(feature);
+				expect(tree).to.render({foo: "change"});
+			});
+
+			it("should be able to join a branch back into the default branch", () => {
+				const main = tree.ref();
+				tree.assign([], {});
+				const feature = tree.fork();
+				tree.assign(["foo"], "change");
+				tree.checkout(main);
+				expect(tree).to.render({});
+				tree.join(feature);
+				expect(tree).to.render({foo: "change"});
+			});
+
+			it("should be able to join a branch to a different branch", () => {
+				const main = tree.ref();
+				tree.assign([], {});
+				const featureA = tree.fork();
+				tree.checkout(main);
+				const featureB = tree.fork();
+				tree.checkout(featureA);
+				tree.assign(["foo"], "change");
+				expect(tree).to.render({foo: "change"});
+				tree.checkout(featureB);
+				expect(tree).to.render({});
+				tree.join(featureA);
+				expect(tree).to.render({foo: "change"});
+				tree.checkout(main);
+				expect(tree).to.render({});
+			});
+
+			it("should be able to continue committing to a branch which has been joined", () => {
+				const main = tree.ref();
+				tree.assign([], {});
+				const feature = tree.fork();
+				tree.assign(["foo"], "change");
+				tree.checkout(main);
+				tree.join(feature);
+				expect(tree).to.render({foo: "change"});
+				tree.checkout(feature);
+				tree.assign(["bar"], "other-change");
+				expect(tree).to.render({foo: "change", bar: "other-change"});
+				tree.checkout(main);
+				expect(tree).to.render({foo: "change"});
+			});
+
+			it("should support checking out a branch that you're already on", () => {
+				const main = tree.ref();
+				expect(tree).to.be.on(main);
+				tree.checkout(main);
+				expect(tree).to.be.on(main);
+
+				const feature = tree.fork();
+				expect(tree).to.be.on(feature);
+				tree.checkout(feature);
+				expect(tree).to.be.on(feature);
+			});
+
+			it("should support joining into the same branch", () => {
+				const main = tree.ref();
+				tree.assign([], {});
+				const feature = tree.fork();
+				tree.assign(["foo"], "bar");
+				expect(tree).to.render({foo: "bar"});
+				expect(tree).to.be.on(feature);
+				tree.join(feature);
+				expect(tree).to.render({foo: "bar"});
+				tree.checkout(main);
+				expect(tree).to.render({});
+			});
+		});
+
+		describe("async collaboration", () => {
+			let treeA: ICRDTree;
+			let treeB: ICRDTree;
+
+			beforeEach(() => {
+				treeA = new CRDTree();
+				treeA.assign([], {});
+				treeB = new CRDTree(treeA.serialize());
+			});
+
+			it("should keep same merging behaviour even when on another branch", () => {
+				const feature = treeA.fork();
+				treeB.merge(treeA);
+				treeA.merge(treeB);
+				treeB.checkout(feature);
+
+				treeA.assign(["foo"], "foo");
+				treeB.assign(["bar"], "bar");
+
+				expect(treeA).to.render({foo: "foo"});
+				expect(treeB).to.render({bar: "bar"});
+				expect(treeA).to.merge(treeB).as({foo: "foo", bar: "bar"});
+			});
+
+
+			it("should not render changes on a branch when on other branches", () => {
+				treeA.fork();
+				treeA.assign(["foo"], "change");
+				treeB.merge(treeA);
+				treeA.merge(treeB);
+				expect(treeA).to.render({foo: "change"});
+				expect(treeB).to.render({});
+
+			});
+
+			it("should be able to checkout a branch made on another replica", () => {
+				const feature = treeA.fork();
+				treeA.assign(["foo"], "change");
+				treeB.merge(treeA);
+				treeA.merge(treeB);
+				treeB.checkout(feature);
+				expect(treeB).to.render({foo: "change"});
+			});
+
+			it("should use the default state if checking out a branch it doesn't know about yet", () => {
+				const feature = treeA.fork();
+				treeB.checkout(feature);
+				expect(treeB).to.render(undefined);
 			});
 		});
 	});

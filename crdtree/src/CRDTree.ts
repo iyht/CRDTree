@@ -1,15 +1,12 @@
-type CRDTreeTransport<T> = unknown[]; // used for sending updates across the network
-type ID = unknown;
-type Index = number | string;
+export type CRDTreeTransport<T> = unknown[]; // used for sending updates across the network
+export type ID = unknown;
+export type Index = number | string;
 
 export interface ICRDTree<T = any> {
-	// new (intialState: T): CRDTree<T>;
-	// new (from: CRDTreeTransport<T>): CRDTree<T>;
-
 	render(): T;
 
 	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
-	// returns affected forks, throws DifferentForkException
+	// returns affected forks
 	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): ID[];
 
 	assign<U = any>(indices: Index[], item: U): void;
@@ -22,7 +19,7 @@ export interface ICRDTree<T = any> {
 	ref(): ID;
 	listRefs(): ID[];
 	fork(): ID;
-	join(ref: ID): void; // throws UnrelatedHistoryException (same fork is a no-op)
+	join(ref: ID): void; // same fork is a no-op
 	checkout(ref: ID): void;
 }
 

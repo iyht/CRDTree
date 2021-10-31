@@ -1,4 +1,4 @@
-import {ICRDTree} from "../../src/CRDTree";
+import {ICRDTree, ID} from "../../src/CRDTree";
 import * as chai from "chai";
 
 chai.Assertion.addMethod('render', function (expectedRender) {
@@ -27,15 +27,20 @@ chai.Assertion.addMethod('asOneOf', function (...expectedRenders) {
 	new chai.Assertion(expectedRenders, "No valid render").to.deep.include(this._obj.render());
 });
 
+chai.Assertion.addMethod('on', function (branch: ID) {
+	new chai.Assertion(this._obj.ref()).to.deep.equal(branch);
+});
+
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-namespace
 	export namespace Chai {
 		interface Assertion {
-			render(val: any): Assertion;
-			renderEqual(remote: ICRDTree): Assertion;
-			merge(remote: ICRDTree): Assertion;
-			as(val: any): Assertion;
-			asOneOf(...renders: any[]): Assertion;
+			render: (val: any) => Assertion;
+			renderEqual: (remote: ICRDTree) => Assertion;
+			merge: (remote: ICRDTree) => Assertion;
+			as: (val: any) => Assertion;
+			asOneOf: (...renders: any[]) => Assertion;
+			on: (id: ID) => Assertion;
 		}
 	}
 }
