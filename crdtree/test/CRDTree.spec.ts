@@ -6,11 +6,12 @@ import "./util/utils";
 describe("CRDTree", () => {
 
 	describe("CRDT", () => {
-		let crdt: ICRDTree;
-
-		beforeEach(() => crdt = new CRDTree());
 
 		describe("assign/insert/delete/render", () => {
+			let crdt: ICRDTree;
+
+			beforeEach(() => crdt = new CRDTree());
+
 			it("should be able to render a new crdt", () =>
 				expect(crdt).to.render(undefined));
 
@@ -148,14 +149,14 @@ describe("CRDTree", () => {
 				expect(() => crdt.assign([], {foo: 69})).to.throw(Error);
 				expect(() => crdt.assign([], [420])).to.throw(Error);
 			});
-		});
 
-		describe("clone", () => {
-			it("should be possible to clone a crdt", () => {
-				crdt.assign([], {});
-				crdt.assign(["bar"], {});
-				const newCrdt = new CRDTree(crdt.serialize());
-				expect(newCrdt).to.render({bar: {}});
+			describe("cloning", () => {
+				it("should be possible to clone a crdt", () => {
+					crdt.assign([], {});
+					crdt.assign(["bar"], {});
+					const newCrdt = new CRDTree(crdt.serialize());
+					expect(newCrdt).to.render({bar: {}});
+				});
 			});
 		});
 
