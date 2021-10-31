@@ -654,7 +654,6 @@ describe("CRDTree", () => {
 				expect(treeA).to.merge(treeB).as({foo: "foo", bar: "bar"});
 			});
 
-
 			it("should not render changes on a branch when on other branches", () => {
 				treeA.fork();
 				treeA.assign(["foo"], "change");
@@ -678,6 +677,7 @@ describe("CRDTree", () => {
 				const feature = treeA.fork();
 				treeB.checkout(feature);
 				expect(treeB).to.render(undefined);
+				expect(treeA).to.merge(treeB).as({});
 			});
 		});
 	});
