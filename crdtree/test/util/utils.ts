@@ -23,8 +23,8 @@ chai.Assertion.addMethod('as', function (expectedRender) {
 	new chai.Assertion(this._obj).render(expectedRender);
 });
 
-chai.Assertion.addMethod('asOneOf', function (expectedRenderA, expectedRenderB) {
-	new chai.Assertion([expectedRenderA, expectedRenderB], "No valid render").to.deep.include(this._obj);
+chai.Assertion.addMethod('asOneOf', function (...expectedRenders) {
+	new chai.Assertion(expectedRenders, "No valid render").to.deep.include(this._obj.render());
 });
 
 declare global {
@@ -35,7 +35,7 @@ declare global {
 			renderEqual(remote: ICRDTree): Assertion;
 			merge(remote: ICRDTree): Assertion;
 			as(val: any): Assertion;
-			asOneOf(valA: any, valB: any): Assertion;
+			asOneOf(...renders: any[]): Assertion;
 		}
 	}
 }
