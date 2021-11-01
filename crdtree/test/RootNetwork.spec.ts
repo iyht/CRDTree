@@ -59,8 +59,8 @@ describe("RootNetwork", () => {
 			expect(rn2.tmp_trans).to.equal(trans);
 			expect(rn3.tmp_trans).to.equal(trans);
 		});
-
-		it ("should be able to exchange a change between nodes", () => {
+		
+		it ("should be able to send and receive a change between nodes", () => {
 			let rn3 = new RootNetwork(8912);
 			rn3.connect([6739, "127.0.0.1"]);
 
@@ -68,5 +68,13 @@ describe("RootNetwork", () => {
 			expect(rn.tmp_trans).to.equal(trans);
 			expect(rn3.tmp_trans).to.equal(trans);
 		});
+
+		
+		// TODO this test case: network partitions
+		// it ("should send messages successfully even " () => {
+
+		// // 1 connects to 2 and 3, sends successfully to 2, 3 suffers a network partition, reconnects, and receives those changes
+
+		// });
 	});
 });
