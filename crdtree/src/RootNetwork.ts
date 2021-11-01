@@ -1,12 +1,14 @@
 import {CRDTreeTransport} from "./CRDTree";
 
-export type asd = any;
+type ipv4addr = [number, string];
 
 export interface INetwork<T = any> {
 
 	// connect to an existing CRDTree network
 	// calls itself and may connect to other nodes it learns about from host
-	connect(port: number, host: string): boolean;
+	connect(host: ipv4addr): boolean;
+
+	get_connected_roots(): ipv4addr[];
 
 	// called by CRDTree to propagate to other processes
 	send(update: CRDTreeTransport<T>): void;
@@ -16,6 +18,8 @@ export interface INetwork<T = any> {
 }
 
 export class RootNetwork<T = any> implements INetwork<T> {
+	tmp_trans: CRDTreeTransport<T>;
+
 	constructor(port:number) {
 		// set up server using port given
 
@@ -24,8 +28,12 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		// after establishing the socket, replies back all known nodes
 		// may learn about new nodes from connecting node
 	}
+	
+	get_connected_roots(): ipv4addr[]{
+		return;
+	};
 
-	connect(port: number, host: string): boolean {
+	connect(host:ipv4addr): boolean {
 		return;
 	}
 
