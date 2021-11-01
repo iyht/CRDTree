@@ -6,12 +6,7 @@ export interface INetwork<T = any> {
 
 	// connect to an existing CRDTree network
 	// calls itself and may connect to other nodes it learns about from host
-	connect(port: number, host: string): void;
-
-	// receive a connection to an existing CRDTree network
-	// after establishing the socket, replies back all known nodes
-	// may learn about new nodes from connecting node
-	onConnect(socket): void;
+	connect(port: number, host: string): boolean;
 
 	// called by CRDTree to propagate to other processes
 	send(update: CRDTreeTransport<T>): void;
@@ -24,12 +19,13 @@ export class RootNetwork<T = any> implements INetwork<T> {
 	constructor(port:number) {
 		// set up server using port given
 
-	}
-	connect(port: number, host: string): void {
-		return;
+
+		// receive a connection to an existing CRDTree network
+		// after establishing the socket, replies back all known nodes
+		// may learn about new nodes from connecting node
 	}
 
-	onConnect(socket): void {
+	connect(port: number, host: string): boolean {
 		return;
 	}
 

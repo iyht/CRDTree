@@ -1,5 +1,5 @@
 export type CRDTreeTransport<T> = unknown; // used for sending updates across the network
-type ID = unknown;
+type ID = unknown; // used for identifying forks
 type Index = number | string;
 
 export interface ICRDTree<T = any> {
