@@ -2,6 +2,15 @@ export type CRDTreeTransport<T> = unknown; // used for sending updates across th
 type ID = unknown; // used for identifying forks
 type Index = number | string;
 
+
+export class Operation {
+	opID: string;
+	branch: string;
+	op: string;
+	data: string;
+	index:string;
+}
+
 export interface ICRDTree<T = any> {
 	// new (intialState: T): CRDTree<T>;
 	// new (from: CRDTreeTransport<T>): CRDTree<T>;
