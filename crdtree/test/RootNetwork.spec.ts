@@ -5,7 +5,7 @@ import {CRDTree, ICRDTree, CRDTreeTransport, Operation} from "../src/CRDTree";
 import { waitForDebugger } from "inspector";
 
 describe("RootNetwork", () => {
-	describe("Socket initialization tests", () => {
+	describe("Initialization tests", () => {
 		let rn: RootNetwork;
 		beforeEach(() => rn = new RootNetwork(6739));
 
@@ -19,6 +19,16 @@ describe("RootNetwork", () => {
 			expect(rn.connect([123, "127.0.0.1"])).to.be.false;
 
 		});
+
+		it("should be able to send even if no others are connected", () => {
+			try {
+				let trans: Operation = {branch: "1", clock: 1, op: "insert", data: "data", index: "0"};
+				let send_crdt_trans : CRDTreeTransport<String[]> = [trans];
+				rn.send(send_crdt_trans);}
+			catch {
+				expect.fail();
+			}
+		})
 
 		it("should be able to connect to another RootNetwork", () => {
 			// TODO can we split testing or do we have to test connect/onConnect together?
