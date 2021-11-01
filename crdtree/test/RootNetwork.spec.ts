@@ -1,8 +1,6 @@
 import {expect} from "chai";
-import {Done} from "mocha";
 import {RootNetwork} from "../src/RootNetwork";
-import {CRDTree, ICRDTree, CRDTreeTransport, Operation} from "../src/CRDTree";
-import { waitForDebugger } from "inspector";
+import {CRDTreeTransport, Operation} from "../src/CRDTree";
 
 describe("RootNetwork", () => {
 	describe("Initialization tests", () => {
@@ -23,9 +21,9 @@ describe("RootNetwork", () => {
 		it("should be able to send even if no others are connected", () => {
 			try {
 				let trans: Operation = {branch: "1", clock: 1, op: "insert", data: "data", index: "0"};
-				let send_crdt_trans : CRDTreeTransport<String[]> = [trans];
-				rn.send(send_crdt_trans);}
-			catch {
+				let send_crdt_trans: CRDTreeTransport<String[]> = [trans];
+				rn.send(send_crdt_trans);
+			} catch {
 				expect.fail();
 			}
 		})
@@ -45,7 +43,7 @@ describe("RootNetwork", () => {
 	describe("Live operation tests", () => {
 		let rn, rn2: RootNetwork;
 		let trans: Operation = {branch: "1", clock: 1, op: "insert", data: "data", index: "0"};
-		let send_crdt_trans : CRDTreeTransport<String[]> = [trans];
+		let send_crdt_trans: CRDTreeTransport<String[]> = [trans];
 
 		beforeEach(() => {
 			rn = new RootNetwork(6739);
@@ -53,7 +51,7 @@ describe("RootNetwork", () => {
 			rn2.connect([6739, "127.0.0.1"]);
 		});
 
-		it ("should be able to send and receive a change between two nodes", () => {
+		it("should be able to send and receive a change between two nodes", () => {
 
 			// TODO handle receive
 			rn.send(send_crdt_trans);
@@ -61,7 +59,7 @@ describe("RootNetwork", () => {
 
 		});
 
-		it ("should be able to send and receive a change between three nodes", () => {
+		it("should be able to send and receive a change between three nodes", () => {
 			let rn3 = new RootNetwork(8912);
 			rn3.connect([6739, "127.0.0.1"]);
 
@@ -69,8 +67,8 @@ describe("RootNetwork", () => {
 			expect(rn2.tmp_trans).to.equal(trans);
 			expect(rn3.tmp_trans).to.equal(trans);
 		});
-		
-		it ("should be able to send and receive a change between nodes", () => {
+
+		it("should be able to send and receive a change between nodes", () => {
 			let rn3 = new RootNetwork(8912);
 			rn3.connect([6739, "127.0.0.1"]);
 
@@ -79,7 +77,7 @@ describe("RootNetwork", () => {
 			expect(rn3.tmp_trans).to.equal(trans);
 		});
 
-		
+
 		// TODO this test case: network partitions
 		// it ("should send messages successfully even " () => {
 

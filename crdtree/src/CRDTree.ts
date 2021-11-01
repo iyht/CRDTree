@@ -1,6 +1,6 @@
 export type CRDTreeTransport<T> = Operation[]; // used for sending updates across the network
-type ID = unknown; // used for identifying forks
-type Index = number | string;
+export type ID = unknown; // used for identifying forks
+export type Index = number | string;
 
 
 
