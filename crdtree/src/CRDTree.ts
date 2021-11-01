@@ -1,6 +1,16 @@
-export type CRDTreeTransport<T> = unknown[]; // used for sending updates across the network
-export type ID = unknown;
-export type Index = number | string;
+export type CRDTreeTransport<T> = Operation[]; // used for sending updates across the network
+type ID = unknown; // used for identifying forks
+type Index = number | string;
+
+
+
+export class Operation {
+	clock: number;
+	branch: string;
+	op: string;
+	data: string;
+	index: string;
+}
 
 export interface ICRDTree<T = any> {
 	render(): T;

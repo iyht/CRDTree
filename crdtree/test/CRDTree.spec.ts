@@ -1,7 +1,5 @@
 import {expect} from "chai";
 import {Done} from "mocha";
-import {CRDTree, ICRDTree} from "../src/CRDTree";
-import "./util/utils";
 
 describe("CRDTree", () => {
 
@@ -15,17 +13,23 @@ describe("CRDTree", () => {
 			it("should be able to render a new crdt", () =>
 				expect(crdt).to.render(undefined));
 
-			it("should be able to assign a primitive", () => {
-				crdt.assign([], true);
-				expect(crdt).to.render(true);
-			});
 
-			it("should be able to reassign a primitive", () => {
-				[false, 10, "foo", null].forEach((primitive) => {
-					crdt.assign([], primitive);
-					expect(crdt).to.render(primitive);
-				});
+		});
+
+		// Local operations
+		describe("insert", () => {
+		});
+
+		describe("delete", () => {
+		});
+
+		// Concurrent operations merging testing
+		describe("Concurrent local insertion", () => {
+			it("should show merge two CRDTs with local insertion, both insertion should be contained in the merged CRDT", (done) => {
+				done(); // TODO
 			});
+		});
+
 
 			it("should only allow JSON serializable data", () => {
 				[undefined, (x) => x(x), NaN].forEach((data: unknown) => {
@@ -39,11 +43,15 @@ describe("CRDTree", () => {
 				crdt.assign([], []);
 				expect(crdt).to.render([]);
 			});
+		});
 
-			it("should be able to assign an object", () => {
-				crdt.assign([], {});
-				expect(crdt).to.render({});
+		// History
+		describe("Basic local history record", () => {
+			it("should show all the local operations are recorded in the history", (done) => {
+				done(); // TODO
 			});
+		});
+
 
 			it("should be able to delete", () => {
 				crdt.assign([], {});
@@ -89,7 +97,10 @@ describe("CRDTree", () => {
 				expect(crdt).to.render({});
 				crdt.delete([]);
 				expect(crdt).to.render(undefined);
+
 			});
+		});
+
 
 			it("should support insertion", () => {
 				crdt.assign([], []);
@@ -99,6 +110,7 @@ describe("CRDTree", () => {
 				crdt.insert([0], 4);
 				crdt.insert([2], 5);
 				expect(crdt).to.render([4, 1, 5, 2, 3]);
+
 			});
 
 			it("should not let a noop affect state", () => {
@@ -159,6 +171,7 @@ describe("CRDTree", () => {
 				});
 			});
 		});
+
 
 		describe("merge", () => {
 			let crdtA: ICRDTree;
@@ -510,13 +523,8 @@ describe("CRDTree", () => {
 		});
 
 		describe("onUpdate", () => {
-			it("should eventually call onUpdate", (done: Done) => {
-				const crdt: ICRDTree = new CRDTree();
-				crdt.onUpdate((update) => {
-					expect(update).to.exist; // TODO need more information than this
-					done();
-				});
-				crdt.assign([], "foo");
+			it("should eventually call onUpdate", (done) => {
+				done(); // TODO
 			});
 		});
 	});
@@ -682,3 +690,7 @@ describe("CRDTree", () => {
 		});
 	});
 });
+
+
+
+
