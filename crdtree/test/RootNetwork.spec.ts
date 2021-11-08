@@ -86,3 +86,20 @@ describe("RootNetwork", () => {
 		// });
 	});
 });
+
+
+describe("Lamport Clock", () =>{
+	describe("Initialization tests", () => {
+
+	});
+	describe("Get timestamp", () => {
+
+	});
+	describe("Update timestamp", () => {
+
+	});
+	describe("Compare two clock", () => {
+
+	});
+
+});
