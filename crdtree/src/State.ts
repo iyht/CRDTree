@@ -1,5 +1,6 @@
-import {BackendChange, Change, ID, Index} from "./types/Types";
+import {ID, Index} from "./types/Types";
 import {ROOT, ROOT_PARENT} from "./Constants";
+import {BackendChange, Change} from "./types/Change";
 
 type MetaMap = Map<ID, Map<Index, ID>>;
 

@@ -1,15 +1,11 @@
 import State from "./State";
 import {
-	ActionKind,
 	ICRDTree,
 	ID,
-	Index,
-	FrontendPrimitive,
-	FrontendAction,
-	BackendChange,
-	Change
+	Index
 } from "./types/Types";
 import {ROOT} from "./Constants";
+import {ActionKind, BackendChange, Change, FrontendAction, FrontendPrimitive} from "./types/Change";
 
 export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
