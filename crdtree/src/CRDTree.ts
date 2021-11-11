@@ -1,76 +1,8 @@
 import State from "./State";
+import {Action, ActionKind, Change, ICRDTree, ID, Index, Primitive} from "./Types";
+import {ROOT} from "./Constants";
 
 export type CRDTreeTransport<T> = Change[]; // used for sending updates across the network
-export type ID = unknown; // used for identifying forks
-export type Index = number | string;
-
-type ROOT = "ROOT";
-const ROOT = "ROOT";
-
-type HEAD = "HEAD";
-const HEAD = "HEAD";
-
-type Primitive = string | number | boolean | null | [] | Record<string, never>;
-
-enum ActionKind {
-	ASSIGN,
-	INSERT,
-	DELETE,
-	NOOP,
-}
-
-type Assignment = {
-	kind: ActionKind.ASSIGN;
-	item: Primitive;
-	at: string;
-	in: ID;
-};
-
-type Insertion = {
-	kind: ActionKind.INSERT;
-	item: Primitive;
-	after: ID | HEAD;
-	in: ID;
-};
-
-type Deletion = {
-	kind: ActionKind.DELETE;
-	at: ID;
-};
-
-type NoOp = {
-	kind: ActionKind.NOOP;
-};
-
-type Action = Assignment | Insertion | Deletion | NoOp;
-
-type Change = {
-	action: Action;
-	pid: string;
-	clock: number;
-	deps: string[];
-};
-
-export interface ICRDTree<T = any> {
-	render(): T;
-
-	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
-	// returns affected forks
-	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): ID[];
-
-	assign<U extends Primitive = any>(indices: Index[], item: U): void;
-	insert<U extends Primitive = any>(indices: [...Index[], number], item: U): void;
-	delete(indices: Index[]): void;
-	noop(): void; // useful when we add commit messages
-
-	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
-
-	ref(): ID;
-	listRefs(): ID[];
-	fork(): ID;
-	join(ref: ID): void; // same fork is a no-op
-	checkout(ref: ID): void;
-}
 
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
@@ -87,7 +19,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.insertChange({
 			action: action,
 			clock: this.state.tick(),
-			deps: [],
+			// deps: [], // TODO probably need this but not sure how it works just yet?
 			pid: this.pid,
 		});
 		this.callbacks.forEach(setImmediate); // TODO might want to tune this lol
@@ -98,11 +30,11 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private getElement(indices: Index[]): string {
-		return "TODO"; // TODO
+		return this.state.getElement(indices);
 	}
 
 	private getParentElement(indices: Index[]): string {
-		return "TODO"; // TODO
+		return this.state.getParentElement(indices); // TODO
 	}
 
 	public assign<U extends Primitive = any>(indices: Index[], item: U): void {
@@ -133,7 +65,9 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public noop(): void {
-		this.makeChange({kind: ActionKind.NOOP});
+		this.makeChange({
+			kind: ActionKind.NOOP,
+		});
 	}
 
 	public serialize(): CRDTreeTransport<T> {
