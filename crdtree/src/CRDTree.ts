@@ -5,7 +5,9 @@ import {
 	Index
 } from "./types/Types";
 import {ROOT} from "./Constants";
-import {ActionKind, BackendChange, Change, FrontendAction, FrontendPrimitive} from "./types/Change";
+import {BackendChange, Change} from "./types/Change";
+import {ActionKind, FrontendAction} from "./types/BaseAction";
+import {FrontendPrimitive} from "./types/Primitive";
 
 export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 

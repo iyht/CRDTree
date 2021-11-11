@@ -1,5 +1,5 @@
 import {CRDTreeTransport} from "../CRDTree";
-import {FrontendPrimitive} from "./Change";
+import {FrontendPrimitive} from "./Primitive";
 
 export type ID = `${string}@${number}` | HEAD | ROOT_PARENT;
 export type Index = number | string;

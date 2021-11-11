@@ -9,11 +9,11 @@ export default class State {
 	private readonly changes: BackendChange[];
 
 	constructor(private clock: number = 0) {
-		this.objects = this.initObjects();
+		this.objects = State.initObjects();
 		this.changes = [];
 	}
 
-	private initObjects(): Map<ID, Map<Index, ID>> {
+	private static initObjects(): Map<ID, Map<Index, ID>> {
 		return new Map<ID, Map<Index, ID>>()
 			.set(ROOT_PARENT, new Map<Index, ID>());
 	}
@@ -53,6 +53,7 @@ export default class State {
 			this.applyChange(change);
 		} else {
 			this.insertChange(change);
+			this.reapplyAllChanges();
 		}
 	}
 
@@ -67,13 +68,17 @@ export default class State {
 
 	private insertChange(newChange: Change): void {
 		// TODO something with the change itself. idk where it goes lol
-		this.initObjects();
+	}
+
+	private reapplyAllChanges(): void {
+		this.objects = State.initObjects();
 		this.changes.forEach((change: Change) =>
 			this.applyChange(change));
 	}
 
 	private applyChange(change: Change): void {
 		const {kind} = change.action;
+
 	}
 
 	public listChanges(): BackendChange[] {
