@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Done} from "mocha";
 import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
-import {ICRDTree, Primitive} from "../src/Types";
+import {ICRDTree, FrontendPrimitive} from "../src/Types";
 
 describe("CRDTree", () => {
 
@@ -32,7 +32,7 @@ describe("CRDTree", () => {
 				// Maybe we should just let the type system prevent this.
 				[undefined, (x) => x(x), NaN].forEach((data: unknown) => {
 					expect(() => {
-						crdt.assign([], data as Primitive);
+						crdt.assign([], data as FrontendPrimitive);
 					}).to.throw(Error);
 				});
 			});

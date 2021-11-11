@@ -1,8 +1,17 @@
 import State from "./State";
-import {Action, ActionKind, Change, ICRDTree, ID, Index, Primitive} from "./Types";
+import {
+	ActionKind,
+	ICRDTree,
+	ID,
+	Index,
+	FrontendPrimitive,
+	FrontendAction,
+	BackendChange,
+	Change
+} from "./types/Types";
 import {ROOT} from "./Constants";
 
-export type CRDTreeTransport<T> = Change[]; // used for sending updates across the network
+export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
@@ -15,7 +24,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.state = new State(); // TODO need to add... pid? should handle the clock stuff
 	}
 
-	private makeChange(action: Action): void {
+	private makeChange(action: FrontendAction): void {
 		this.insertChange({
 			action: action,
 			clock: this.state.tick(),
@@ -26,18 +35,18 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private insertChange(change: Change): void {
-		return;
+		this.state.addChange(change);
 	}
 
-	private getElement(indices: Index[]): string {
+	private getElement(indices: Index[]): ID {
 		return this.state.getElement(indices);
 	}
 
-	private getParentElement(indices: Index[]): string {
-		return this.state.getParentElement(indices); // TODO
+	private getParentElement(indices: Index[]): ID {
+		return this.state.getParentElement(indices);
 	}
 
-	public assign<U extends Primitive = any>(indices: Index[], item: U): void {
+	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {
 		const last = indices.map(String)[indices.length - 1] ?? ROOT;
 		this.makeChange({
 			at: last,
@@ -47,7 +56,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		});
 	}
 
-	public insert<U extends Primitive = any>(indices: [...Index[], number], item: U): void {
+	public insert<U extends FrontendPrimitive = any>(indices: [...Index[], number], item: U): void {
 		const last: number = indices[indices.length - 1] as number;
 		this.makeChange({
 			after: this.getElement([...indices.slice(0, -1), last - 1]),
@@ -71,20 +80,23 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public serialize(): CRDTreeTransport<T> {
-		return undefined;
+		return this.state.listChanges();
 	}
 
-	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
-		return [];
-	}
-
-	// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET ===========================================
 	public render(): T {
 		return undefined;
 	}
 
 	public onUpdate(callback: (update: CRDTreeTransport<T>) => void): void {
 		this.callbacks.push(callback);
+	}
+
+	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
+		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
+		changes.forEach((change: BackendChange) => this.insertChange(change));
+
+		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================
+		return [];
 	}
 
 	public fork(): ID {
