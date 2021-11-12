@@ -10,7 +10,14 @@ import {
 	isBackendInsertion,
 	isDeletion
 } from "./types/BaseAction";
-import {BasePrimitive, FrontendPrimitive, isBackendPrimitive, ObjectKind, ObjectPrimitive} from "./types/Primitive";
+import {
+	BackendPrimitive,
+	BasePrimitive,
+	FrontendPrimitive,
+	isBackendPrimitive,
+	ObjectKind,
+	ObjectPrimitive
+} from "./types/Primitive";
 
 type Entry = { name: ID, value: BasePrimitive, deleted: boolean };
 type MetaObject = Map<Index, Entry> | Array<Entry>;
@@ -136,23 +143,29 @@ export default class State<T = any> {
 		}
 	}
 
-	private applyAssignment(assignment: BackendAssignment): void {
-		const {item, at, in: _in} = assignment;
-		if (!this.objects.has(_in)) {
-			this.objects.set(_in, new Map());
-		}
-		const {name, value, kind} = item;
-		const parent = this.objects.get(_in);
-		if (Array.isArray(parent)) {
-			State.assignToList(parent, at, name, value);
-		} else {
-			parent.set(at, {name, value, deleted: false});
-		}
+	private getMetaObject(name: ID): MetaObject {
+		return this.objects.get(name);
+	}
+
+	private createMetaObject(item: BackendPrimitive): void {
+		const {name, kind} = item;
 		if (kind === ObjectKind.OBJECT) {
 			this.objects.set(name, new Map());
 		} else if (kind === ObjectKind.ARRAY) {
 			this.objects.set(name, []);
 		}
+	}
+
+	private applyAssignment(assignment: BackendAssignment): void {
+		const {item, at, in: _in} = assignment;
+		const {name, value} = item;
+		const parent = this.getMetaObject(_in);
+		if (Array.isArray(parent)) {
+			State.assignToList(parent, at, name, value);
+		} else {
+			parent.set(at, {name, value, deleted: false});
+		}
+		this.createMetaObject(item);
 	}
 
 	private static assignToList(parent: Array<Entry>, at: Index, name: ID, value: BasePrimitive): void {
@@ -162,7 +175,11 @@ export default class State<T = any> {
 		}
 		const oldEntry = parent[trueIndex];
 		parent[trueIndex] = {...oldEntry, deleted: true};
-		parent.splice(trueIndex + 1, 0, {name, value, deleted: false});
+		State.insertInList(parent, trueIndex + 1, name, value);
+	}
+
+	private static insertInList(parent: Array<Entry>, index: number, name: ID, value: BasePrimitive): void {
+		parent.splice(index, 0, {name, value, deleted: false});
 	}
 
 	// TODO should not be in this file
@@ -184,7 +201,21 @@ export default class State<T = any> {
 	}
 
 	private applyInsertion(insertion: BackendInsertion): void {
-		// TODO aaaaaaaaa
+		const {item, after, in: _in} = insertion;
+		const {name, value} = item;
+		const parent = this.getMetaObject(_in);
+		if (Array.isArray(parent)) {
+			const index = State.findInsertionIndex(parent, insertion);
+			State.insertInList(parent, index, name, value);
+		} else {
+			throw new RangeError("Cannot insert into a non-list");
+		}
+		this.createMetaObject(item);
+	}
+
+	private static findInsertionIndex(entries: Array<Entry>, insertion: BackendInsertion): number {
+		// TODO aaaaaaaa
+		return 0;
 	}
 
 	private applyDeletion(deletion: Deletion): void {

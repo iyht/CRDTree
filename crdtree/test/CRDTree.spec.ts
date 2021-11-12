@@ -108,7 +108,7 @@ describe("CRDTree", () => {
 
 			it("should support deletion", () => {
 				crdt.assign([], {});
-				crdt.assign(["foo"], {});
+				crdt.assign(["foo"], []);
 				crdt.insert(["foo", 0], 10);
 				expect(crdt).to.render({foo: [10]});
 				crdt.delete(["foo", 0]);
