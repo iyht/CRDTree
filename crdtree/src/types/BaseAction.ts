@@ -1,4 +1,4 @@
-import {HEAD, ID} from "./Types";
+import {HEAD, ID, Index} from "./Types";
 import {BackendPrimitive, FrontendPrimitive} from "./Primitive";
 
 export enum ActionKind {
@@ -14,19 +14,20 @@ type BaseAssignment = {
 	in: ID;
 };
 type FrontendAssignment = BaseAssignment & { item: FrontendPrimitive };
-type BackendAssignment = BaseAssignment & { item: BackendPrimitive };
+export type BackendAssignment = BaseAssignment & { item: BackendPrimitive };
 type BaseInsertion = {
 	kind: ActionKind.INSERT;
 	after: ID | HEAD;
 	in: ID;
 };
 type FrontendInsertion = BaseInsertion & { item: FrontendPrimitive };
-type BackendInsertion = BaseInsertion & { item: BackendPrimitive };
-type Deletion = {
+export type BackendInsertion = BaseInsertion & { item: BackendPrimitive };
+export type Deletion = {
 	kind: ActionKind.DELETE;
-	at: ID;
+	at: Index;
+	in: ID;
 };
-type NoOp = {
+export type NoOp = {
 	kind: ActionKind.NOOP;
 };
 type BaseAction = Deletion | NoOp;

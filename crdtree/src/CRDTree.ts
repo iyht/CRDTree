@@ -13,19 +13,19 @@ export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates a
 
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
-	private readonly state: State;
+	private readonly state: State<T>;
 	private readonly pid: string;
 
 	constructor(from: CRDTreeTransport<T> = []) {
 		this.callbacks = [];
 		this.pid = String(Date.now()); // TODO lol
-		this.state = new State(); // TODO need to add... pid? should handle the clock stuff
+		this.state = new State<T>(); // TODO need to add... pid? should handle the clock stuff
 	}
 
 	private makeChange(action: FrontendAction): void {
 		this.insertChange({
 			action: action,
-			clock: this.state.tick(),
+			clock: this.state.next(),
 			// deps: [], // TODO probably need this but not sure how it works just yet?
 			pid: this.pid,
 		});
@@ -65,8 +65,10 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public delete(indices: Index[]): void {
+		const last = indices.map(String)[indices.length - 1] ?? ROOT;
 		this.makeChange({
-			at: this.getElement(indices),
+			in: this.getParentElement(indices),
+			at: last,
 			kind: ActionKind.DELETE,
 		});
 	}
@@ -82,7 +84,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public render(): T {
-		return undefined;
+		return this.state.render();
 	}
 
 	public onUpdate(callback: (update: CRDTreeTransport<T>) => void): void {

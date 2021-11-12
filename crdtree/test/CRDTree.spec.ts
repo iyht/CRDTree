@@ -2,7 +2,8 @@ import {expect} from "chai";
 import {Done} from "mocha";
 import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
-import {ICRDTree, FrontendPrimitive} from "../src/Types";
+import {ICRDTree} from "../src/types/Types";
+import {FrontendPrimitive} from "../src/types/Primitive";
 
 describe("CRDTree", () => {
 
@@ -60,7 +61,32 @@ describe("CRDTree", () => {
 				expect(crdt).to.render(10);
 			});
 
-			it("should be able to assign to sub-objects", () => {
+			it("should be able to assign to sub-objects (just objects)", () => {
+				crdt.assign([], {});
+				crdt.assign(["foo"], {});
+				crdt.assign(["foo", "bar"], {});
+				crdt.assign(["foo", "bar", "baz"], "change");
+				expect(crdt).to.render({foo: {bar: {baz: "change"}}});
+			});
+
+			it("should be able to delete a sub-object", () => {
+				crdt.assign([], {});
+				crdt.assign(["foo"], {});
+				crdt.assign(["foo", "bar"], {});
+				crdt.assign(["foo", "bar", "baz"], "change");
+				crdt.delete(["foo", "bar"]);
+				expect(crdt).to.render({foo: {}});
+			});
+
+			it("should be able to assign to sub-objects (just arrays)", () => {
+				crdt.assign([], []);
+				crdt.insert([0], []);
+				crdt.insert([0, 0], []);
+				crdt.insert([0, 0, 0], "foo");
+				expect(crdt).to.render([[["foo"]]]);
+			});
+
+			it("should be able to assign to sub-objects (mixed)", () => {
 				crdt.assign([], {});
 				crdt.assign(["foo"], []);
 				crdt.insert(["foo", 0], 10);
