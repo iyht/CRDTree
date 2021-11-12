@@ -23,17 +23,18 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private makeChange(action: FrontendAction): void {
-		this.insertChange({
+		const backendChange = this.insertChange({
 			action: action,
 			clock: this.state.next(),
 			// deps: [], // TODO probably need this but not sure how it works just yet?
 			pid: this.pid,
 		});
-		this.callbacks.forEach(setImmediate); // TODO might want to tune this lol
+		this.callbacks.forEach((callback) =>
+			setImmediate(callback, [backendChange]));
 	}
 
-	private insertChange(change: Change): void {
-		this.state.addChange(change);
+	private insertChange(change: Change): BackendChange {
+		return this.state.addChange(change);
 	}
 
 	private getElement(indices: Index[]): ID {

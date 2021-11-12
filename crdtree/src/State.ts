@@ -22,7 +22,7 @@ export default class State<T = any> {
 	private objects: MetaMap;
 	private clock: number;
 
-	constructor(private changes: BackendChange[]) {
+	constructor(private readonly changes: BackendChange[]) {
 		this.objects = State.initObjects();
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
 		this.reapplyAllChanges();
@@ -62,7 +62,7 @@ export default class State<T = any> {
 			this.getObjectProxy(name).get(index).name as ID, ROOT_PARENT) as ID;
 	}
 
-	public addChange(change: Change): void {
+	public addChange(change: Change): BackendChange {
 		change = State.ensureBackendChange(change);
 		const {clock} = change;
 		if (clock > this.clock) {
@@ -72,6 +72,7 @@ export default class State<T = any> {
 			this.insertChange(change);
 			this.reapplyAllChanges();
 		}
+		return change;
 	}
 
 	private static ensureBackendChange(change: Change): BackendChange {
