@@ -10,7 +10,7 @@ export enum ActionKind {
 
 type BaseAssignment = {
 	kind: ActionKind.ASSIGN;
-	at: string;
+	at: Index;
 	in: ID;
 };
 type FrontendAssignment = BaseAssignment & { item: FrontendPrimitive };

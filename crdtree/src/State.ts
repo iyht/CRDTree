@@ -65,20 +65,21 @@ export default class State<T = any> {
 	private getElementImpl(indices: Index[]): ID {
 		return indices.reduce((name: ID, index: Index): ID => {
 			const metaObject = this.getObjectProxy(name);
+			let entry: Entry;
 			if (metaObject instanceof Map) {
-				return metaObject.get(index)?.name;
+				entry = metaObject.get(index);
 			} else {
-				return metaObject[State.findIndexInTombstoneArray(metaObject, State.ensureNumber(index))]?.name;
+				entry = metaObject[State.findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
 			}
+			return entry?.deleted ? undefined : entry?.name;
 		}, ROOT_PARENT) as ID;
 	}
 
 	private static ensureNumber(maybeNumber: any): number {
-		const probablyNumber = Number(maybeNumber);
-		if (!isFinite(probablyNumber)) {
+		if (typeof maybeNumber !== "number" || !isFinite(maybeNumber)) {
 			throw new RangeError("Must use numbers to index into arrays");
 		}
-		return probablyNumber; // definitely number
+		return maybeNumber; // definitely number
 	}
 
 	public addChange(change: Change): BackendChange {
@@ -185,9 +186,9 @@ export default class State<T = any> {
 	// TODO should not be in this file
 	private static findIndexInTombstoneArray(entries: Array<Entry>, liveIndex: number): number {
 		let currentIndexOffset = liveIndex;
-		let index = 0;
-		for (let i = 0; i < entries.length; i = i + 1) {
-			const entry = entries[i];
+		let index;
+		for (index = 0; index < entries.length; index = index + 1) {
+			const entry = entries[index];
 			if (entry.deleted === false) {
 				if (currentIndexOffset === 0) {
 					return index;
@@ -195,27 +196,51 @@ export default class State<T = any> {
 					currentIndexOffset = currentIndexOffset - 1;
 				}
 			}
-			index = index + 1;
 		}
-		return -1;
+		if (liveIndex < 0) {
+			return -1;
+		} else {
+			throw new RangeError("Attempting to insert off the end of the list");
+		}
 	}
 
 	private applyInsertion(insertion: BackendInsertion): void {
-		const {item, after, in: _in} = insertion;
+		const {item, in: _in} = insertion;
 		const {name, value} = item;
 		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
 			const index = State.findInsertionIndex(parent, insertion);
 			State.insertInList(parent, index, name, value);
 		} else {
+			// TODO should really ensure this happens before application time
 			throw new RangeError("Cannot insert into a non-list");
 		}
 		this.createMetaObject(item);
 	}
 
 	private static findInsertionIndex(entries: Array<Entry>, insertion: BackendInsertion): number {
-		// TODO aaaaaaaa
-		return 0;
+		const {after} = insertion;
+		// if inserting at the beginning of the list, start will be -1
+		const start = entries.findIndex((entry) => entry.name === after);
+		for (let index = start + 1; index < entries.length; index = index + 1) {
+			const existingEntry = entries[index];
+			if (State.nameLt(existingEntry.name, insertion.item.name)) { // existing entry happened before
+				return index;
+			}
+		}
+		return entries.length;
+	}
+
+	private static nameLt(a: ID, b: ID): boolean {
+		const [aPid, aClockString] = a.split("@");
+		const [bPid, bClockString] = b.split("@");
+		const aClock = Number(aClockString);
+		const bClock = Number(bClockString);
+		if (aClock < bClock) return true;
+		if (bClock < aClock) return false;
+		if (aPid < bPid) return true;
+		if (bPid < aPid) return false;
+		throw new EvalError("Two items in list with same name should be impossible");
 	}
 
 	private applyDeletion(deletion: Deletion): void {

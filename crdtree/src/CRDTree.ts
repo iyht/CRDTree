@@ -46,7 +46,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {
-		const last = indices.map(String)[indices.length - 1] ?? ROOT;
+		const last = indices[indices.length - 1] ?? (ROOT as Index);
 		this.makeChange({
 			at: last,
 			in: this.getParentElement(indices),
