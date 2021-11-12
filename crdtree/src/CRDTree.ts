@@ -66,10 +66,9 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public delete(indices: Index[]): void {
-		const last = indices.map(String)[indices.length - 1] ?? ROOT;
 		this.makeChange({
 			in: this.getParentElement(indices),
-			at: last,
+			at: this.getElement(indices),
 			kind: ActionKind.DELETE,
 		});
 	}

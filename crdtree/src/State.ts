@@ -4,19 +4,17 @@ import {BackendChange, Change} from "./types/Change";
 import {
 	ActionKind,
 	BackendAssignment,
-	BackendInsertion, Deletion,
+	BackendInsertion,
+	Deletion,
 	isBackendAssignment,
-	isBackendInsertion, isDeletion
+	isBackendInsertion,
+	isDeletion
 } from "./types/BaseAction";
-import {
-	BasePrimitive,
-	isBackendPrimitive,
-	ObjectKind,
-	ObjectPrimitive
-} from "./types/Primitive";
+import {BasePrimitive, FrontendPrimitive, isBackendPrimitive, ObjectKind, ObjectPrimitive} from "./types/Primitive";
 
-type Entry = { name: ID | BasePrimitive, deleted: boolean };
-type MetaMap = Map<ID, Map<Index, Entry>>;
+type Entry = { name: ID, value: BasePrimitive, deleted: boolean };
+type MetaObject = Map<Index, Entry> | Array<Entry>;
+type MetaMap = Map<ID, MetaObject>;
 
 export default class State<T = any> {
 	private objects: MetaMap;
@@ -30,13 +28,13 @@ export default class State<T = any> {
 
 	private static initObjects(): Map<ID, Map<Index, Entry>> {
 		const rootParent = new Map<Index, Entry>()
-			.set(ROOT, { name: undefined, deleted: false });
+			.set(ROOT, {name: undefined, value: undefined, deleted: true});
 		return new Map<ID, Map<Index, Entry>>()
 			.set(ROOT_PARENT, rootParent);
 	}
 
 	public next(): number {
-		return this.clock + 1; // TODO missing some math.max somewhere...
+		return this.clock + 1;
 	}
 
 	public getElement(indices: Index[]): ID {
@@ -49,7 +47,7 @@ export default class State<T = any> {
 		return element;
 	}
 
-	private getObjectProxy(name: ID): Map<Index, Entry> {
+	private getObjectProxy(name: ID): MetaObject {
 		const currentMap = this.objects.get(name);
 		if (!currentMap) {
 			throw new RangeError("Indexable element does not exist at this index");
@@ -58,8 +56,15 @@ export default class State<T = any> {
 	}
 
 	private getElementImpl(indices: Index[]): ID {
-		return indices.reduce((name: ID, index: Index): ID =>
-			this.getObjectProxy(name).get(index).name as ID, ROOT_PARENT) as ID;
+		return indices.reduce((name: ID, index: Index): ID => {
+			const metaObject = this.getObjectProxy(name);
+			if (metaObject instanceof Map) {
+				return metaObject.get(index).name;
+			} else {
+				// TODO
+				return null;
+			}
+		}, ROOT_PARENT) as ID;
 	}
 
 	public addChange(change: Change): BackendChange {
@@ -81,11 +86,19 @@ export default class State<T = any> {
 			return change as BackendChange;
 		} else {
 			const {pid, clock} = change;
-			const kind = Array.isArray(change.action.item) ? ObjectKind.ARRAY : ObjectKind.OBJECT;
 			const name: ID = `${pid}@${clock}`;
-			const item = {name, kind};
+			const item = State.toObjectPrimitive(name, change.action.item);
 			const action = {...change.action, item};
 			return {...change, action};
+		}
+	}
+
+	// TODO def shouldn't be in this file
+	private static toObjectPrimitive(name: ID, item: FrontendPrimitive): ObjectPrimitive {
+		if (typeof item === "object" && item !== null) {
+			return {name, value: undefined, kind: Array.isArray(item) ? ObjectKind.ARRAY : ObjectKind.OBJECT};
+		} else {
+			return {name, value: item as BasePrimitive, kind: ObjectKind.OTHER};
 		}
 	}
 
@@ -121,12 +134,14 @@ export default class State<T = any> {
 		if (!this.objects.has(_in)) {
 			this.objects.set(_in, new Map());
 		}
-		if (item && item["name"]) {
-			const objectDescription = item as ObjectPrimitive;
-			this.objects.get(_in).set(at, {name: objectDescription.name, deleted: false});
-			this.objects.set(objectDescription.name, new Map());
-		} else {
-			this.objects.get(_in).set(at, {name: item as BasePrimitive, deleted: false});
+		const {name, value, kind} = item;
+		// TODO what if assigning to a list thingy??????
+		(this.objects.get(_in) as Map<Index, Entry>)
+			.set(at, {name, value, deleted: false});
+		if (kind === ObjectKind.OBJECT) {
+			this.objects.set(name, new Map());
+		} else if (kind === ObjectKind.ARRAY) {
+			this.objects.set(name, []);
 		}
 	}
 
@@ -136,9 +151,15 @@ export default class State<T = any> {
 
 	private applyDeletion(deletion: Deletion): void {
 		const {at, in: _in} = deletion;
-		const entry = this.objects.get(_in).get(at);
-		if (entry) {
-			this.objects.get(_in).set(at, {...entry, deleted: true});
+		const parent = this.objects.get(_in);
+		if (Array.isArray(parent)) {
+			parent
+				.forEach((entry, index) =>
+					(entry.name === at) && (parent[index] = {...entry, deleted: true}));
+		} else {
+			Array.from(parent.entries())
+				.forEach(([name, entry]) =>
+					(entry.name === at) && parent.set(name, {...entry, deleted: true}));
 		}
 	}
 
@@ -147,26 +168,33 @@ export default class State<T = any> {
 	}
 
 	public render(): T {
-		const metaObject = this.objects.get(ROOT_PARENT);
+		const metaObject = this.objects.get(ROOT_PARENT) as Map<Index, Entry>;
 		if (metaObject.get(ROOT).deleted) {
 			return undefined;
 		} else {
-			return this.renderRecursive(metaObject)[ROOT];
+			return this.renderRecursiveMap(metaObject)[ROOT];
 		}
 	}
 
-	private renderRecursive(metaObject: Map<Index, Entry>): any {
+	private renderRecursiveMap(metaObject: Map<Index, Entry>): any {
 		return Array.from(metaObject.entries()).reduce((element: any, [index, entry]): any => {
 			if (entry.deleted) {
 				return element;
-			} if (this.objects.has(entry.name as ID)) {
+			}
+			if (this.objects.has(entry.name as ID)) {
 				const {name} = entry;
-				element[index] = this.renderRecursive(this.objects.get(name as ID));
+				const metaObject = this.objects.get(name as ID);
+				element[index] = Array.isArray(metaObject) ?
+					this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
 				return element;
 			} else {
-				element[index] = entry.name;
+				element[index] = entry.value;
 				return element;
 			}
 		}, {});
+	}
+
+	private renderRecursiveList(metaObject: Array<Entry>): any {
+		return [];
 	}
 }
