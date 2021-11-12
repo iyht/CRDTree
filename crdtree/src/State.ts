@@ -59,12 +59,19 @@ export default class State<T = any> {
 		return indices.reduce((name: ID, index: Index): ID => {
 			const metaObject = this.getObjectProxy(name);
 			if (metaObject instanceof Map) {
-				return metaObject.get(index).name;
+				return metaObject.get(index)?.name;
 			} else {
-				// TODO
-				return null;
+				return metaObject[State.findIndexInTombstoneArray(metaObject, State.ensureNumber(index))]?.name;
 			}
 		}, ROOT_PARENT) as ID;
+	}
+
+	private static ensureNumber(maybeNumber: any): number {
+		const probablyNumber = Number(maybeNumber);
+		if (!isFinite(probablyNumber)) {
+			throw new RangeError("Must use numbers to index into arrays");
+		}
+		return probablyNumber; // definitely number
 	}
 
 	public addChange(change: Change): BackendChange {
@@ -149,11 +156,7 @@ export default class State<T = any> {
 	}
 
 	private static assignToList(parent: Array<Entry>, at: Index, name: ID, value: BasePrimitive): void {
-		const numberAt = Number(at);
-		if (!isFinite(numberAt)) {
-			throw new RangeError("Must use numbers to index into arrays");
-		}
-		const trueIndex = State.findIndexInTombstoneArray(parent, numberAt);
+		const trueIndex = State.findIndexInTombstoneArray(parent, State.ensureNumber(at));
 		if (trueIndex < 0) {
 			throw new RangeError("Cannot assign to something that does not exist");
 		}
@@ -213,23 +216,26 @@ export default class State<T = any> {
 
 	private renderRecursiveMap(metaObject: Map<Index, Entry>): any {
 		return Array.from(metaObject.entries()).reduce((element: any, [index, entry]): any => {
-			if (entry.deleted) {
-				return element;
+			if (entry.deleted === false) {
+				element[index] = this.renderRecursive(entry);
 			}
-			if (this.objects.has(entry.name as ID)) {
-				const {name} = entry;
-				const metaObject = this.objects.get(name as ID);
-				element[index] = Array.isArray(metaObject) ?
-					this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
-				return element;
-			} else {
-				element[index] = entry.value;
-				return element;
-			}
+			return element;
 		}, {});
 	}
 
 	private renderRecursiveList(metaObject: Array<Entry>): any {
-		return [];
+		return metaObject.filter((entry) => entry.deleted === false)
+			.map((entry) => this.renderRecursive(entry));
+	}
+
+	private renderRecursive(entry: Entry): any {
+		if (this.objects.has(entry.name as ID)) {
+			const {name} = entry;
+			const metaObject = this.objects.get(name as ID);
+			return Array.isArray(metaObject) ?
+				this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
+		} else {
+			return entry.value;
+		}
 	}
 }
