@@ -50,21 +50,13 @@ export default class State<T = any> {
 
 	public getParentElement(indices: Index[]): ID {
 		const element = this.getElementImpl([ROOT, ...indices].slice(0, -1));
-		this.getObjectProxy(element); // for side effect of asserting that this is indexable
+		this.getMetaObject(element); // for side effect of asserting that this is indexable
 		return element;
-	}
-
-	private getObjectProxy(name: ID): MetaObject {
-		const currentMap = this.objects.get(name);
-		if (!currentMap) {
-			throw new RangeError("Indexable element does not exist at this index");
-		}
-		return currentMap;
 	}
 
 	private getElementImpl(indices: Index[]): ID {
 		return indices.reduce((name: ID, index: Index): ID => {
-			const metaObject = this.getObjectProxy(name);
+			const metaObject = this.getMetaObject(name);
 			let entry: Entry;
 			if (metaObject instanceof Map) {
 				entry = metaObject.get(index);
@@ -145,7 +137,11 @@ export default class State<T = any> {
 	}
 
 	private getMetaObject(name: ID): MetaObject {
-		return this.objects.get(name);
+		const currentMap = this.objects.get(name);
+		if (!currentMap) {
+			throw new RangeError("Indexable element does not exist at this index");
+		}
+		return currentMap;
 	}
 
 	private createMetaObject(item: BackendPrimitive): void {
@@ -231,6 +227,7 @@ export default class State<T = any> {
 		return entries.length;
 	}
 
+	// TODO this code should not live here either
 	private static nameLt(a: ID, b: ID): boolean {
 		const [aPid, aClockString] = a.split("@");
 		const [bPid, bClockString] = b.split("@");
@@ -245,7 +242,7 @@ export default class State<T = any> {
 
 	private applyDeletion(deletion: Deletion): void {
 		const {at, in: _in} = deletion;
-		const parent = this.objects.get(_in);
+		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
 			parent
 				.forEach((entry, index) =>
@@ -262,7 +259,7 @@ export default class State<T = any> {
 	}
 
 	public render(): T {
-		const metaObject = this.objects.get(ROOT_PARENT) as Map<Index, Entry>;
+		const metaObject = this.getMetaObject(ROOT_PARENT) as Map<Index, Entry>;
 		if (metaObject.get(ROOT).deleted) {
 			return undefined;
 		} else {
@@ -287,7 +284,7 @@ export default class State<T = any> {
 	private renderRecursive(entry: Entry): any {
 		if (this.objects.has(entry.name as ID)) {
 			const {name} = entry;
-			const metaObject = this.objects.get(name as ID);
+			const metaObject = this.getMetaObject(name as ID);
 			return Array.isArray(metaObject) ?
 				this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
 		} else {
