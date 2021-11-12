@@ -135,14 +135,49 @@ export default class State<T = any> {
 			this.objects.set(_in, new Map());
 		}
 		const {name, value, kind} = item;
-		// TODO what if assigning to a list thingy??????
-		(this.objects.get(_in) as Map<Index, Entry>)
-			.set(at, {name, value, deleted: false});
+		const parent = this.objects.get(_in);
+		if (Array.isArray(parent)) {
+			State.assignToList(parent, at, name, value);
+		} else {
+			parent.set(at, {name, value, deleted: false});
+		}
 		if (kind === ObjectKind.OBJECT) {
 			this.objects.set(name, new Map());
 		} else if (kind === ObjectKind.ARRAY) {
 			this.objects.set(name, []);
 		}
+	}
+
+	private static assignToList(parent: Array<Entry>, at: Index, name: ID, value: BasePrimitive): void {
+		const numberAt = Number(at);
+		if (!isFinite(numberAt)) {
+			throw new RangeError("Must use numbers to index into arrays");
+		}
+		const trueIndex = State.findIndexInTombstoneArray(parent, numberAt);
+		if (trueIndex < 0) {
+			throw new RangeError("Cannot assign to something that does not exist");
+		}
+		const oldEntry = parent[trueIndex];
+		parent[trueIndex] = {...oldEntry, deleted: true};
+		parent.splice(trueIndex + 1, 0, {name, value, deleted: false});
+	}
+
+	// TODO should not be in this file
+	private static findIndexInTombstoneArray(entries: Array<Entry>, liveIndex: number): number {
+		let currentIndexOffset = liveIndex;
+		let index = 0;
+		for (let i = 0; i < entries.length; i = i + 1) {
+			const entry = entries[i];
+			if (entry.deleted === false) {
+				if (currentIndexOffset === 0) {
+					return index;
+				} else {
+					currentIndexOffset = currentIndexOffset - 1;
+				}
+			}
+			index = index + 1;
+		}
+		return -1;
 	}
 
 	private applyInsertion(insertion: BackendInsertion): void {
