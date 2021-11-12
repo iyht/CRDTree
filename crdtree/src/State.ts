@@ -19,7 +19,7 @@ import {
 	ObjectPrimitive
 } from "./types/Primitive";
 
-type Entry = { name: ID, value: BasePrimitive, deleted: boolean };
+type Entry = { name: ID, kind: ObjectKind, value: BasePrimitive, deleted: boolean };
 type MetaObject = Map<Index, Entry> | Array<Entry>;
 type MetaMap = Map<ID, MetaObject>;
 
@@ -51,7 +51,7 @@ export default class State<T = any> {
 
 	private initObjects(): void {
 		const rootParent = new Map<Index, Entry>()
-			.set(ROOT, {name: undefined, value: undefined, deleted: true});
+			.set(ROOT, {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true});
 		this.objects = new Map<ID, Map<Index, Entry>>()
 			.set(ROOT_PARENT, rootParent);
 	}
@@ -132,7 +132,6 @@ export default class State<T = any> {
 	}
 
 	private insertChange(change: BackendChange): void {
-		// TODO something with the change itself. idk where it goes lol
 		this.changes.push(change);
 		this.changes.sort((a, b) => {
 			if (State.clockLt(a, b)) {
@@ -179,29 +178,31 @@ export default class State<T = any> {
 
 	private applyAssignment(assignment: BackendAssignment): void {
 		const {item, at, in: _in} = assignment;
-		const {name, value} = item;
+		const {name, value, kind} = item;
 		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
-			State.assignToList(parent, at, name, value);
+			State.assignToList(parent, at, item);
 		} else {
-			parent.set(at, {name, value, deleted: false});
+			parent.set(at, {name, value, kind, deleted: false});
 		}
 		this.createMetaObject(item);
 	}
 
-	private static assignToList(parent: Array<Entry>, at: Index, name: ID, value: BasePrimitive): void {
+	private static assignToList(parent: Array<Entry>, at: Index, item: ObjectPrimitive): void {
+		const {value, name, kind} = item;
 		const trueIndex = State.findIndexInTombstoneArray(parent, State.ensureNumber(at));
 		if (trueIndex < 0) {
 			throw new RangeError("Cannot assign to something that does not exist");
 		}
 		const oldEntry = parent[trueIndex];
 		// const {name, value} = oldEntry;
-		parent[trueIndex] = {...oldEntry, value};
+		parent[trueIndex] = {...oldEntry, name, value, kind};
 		// State.insertInList(parent, trueIndex + 1, name, value);
 	}
 
-	private static insertInList(parent: Array<Entry>, index: number, name: ID, value: BasePrimitive): void {
-		parent.splice(index, 0, {name, value, deleted: false});
+	private static insertInList(parent: Array<Entry>, index: number, item: ObjectPrimitive): void {
+		const {name, value, kind} = item;
+		parent.splice(index, 0, {name, value, kind, deleted: false});
 	}
 
 	// TODO should not be in this file
@@ -227,11 +228,10 @@ export default class State<T = any> {
 
 	private applyInsertion(insertion: BackendInsertion): void {
 		const {item, in: _in} = insertion;
-		const {name, value} = item;
 		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
 			const index = State.findInsertionIndex(parent, insertion);
-			State.insertInList(parent, index, name, value);
+			State.insertInList(parent, index, item);
 		} else {
 			// TODO should really ensure this happens before application time
 			throw new RangeError("Cannot insert into a non-list");
@@ -315,7 +315,7 @@ export default class State<T = any> {
 	}
 
 	private renderRecursive(entry: Entry): any {
-		if (this.objects.has(entry.name as ID)) {
+		if (entry.kind !== ObjectKind.OTHER) {
 			const {name} = entry;
 			const metaObject = this.getMetaObject(name as ID);
 			return Array.isArray(metaObject) ?

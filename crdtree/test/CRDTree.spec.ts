@@ -412,7 +412,7 @@ describe("CRDTree", () => {
 
 					crdtA.assign(["list", 0], []);
 					crdtB.assign(["list", 0], {});
-					expect(crdtA).to.merge(crdtB).asOneOf({list: [[]]}, {foo: [{}]});
+					expect(crdtA).to.merge(crdtB).asOneOf({list: [[]]}, {list: [{}]});
 				});
 
 				it("should pick a winner from concurrent, consecutive changes including assignment", () => {
