@@ -19,7 +19,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	constructor(from: CRDTreeTransport<T> = []) {
 		this.callbacks = [];
 		this.pid = String(Date.now()); // TODO lol
-		this.state = new State<T>(); // TODO need to add... pid? should handle the clock stuff
+		this.state = new State<T>(from);
 	}
 
 	private makeChange(action: FrontendAction): void {

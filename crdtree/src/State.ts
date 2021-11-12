@@ -20,11 +20,12 @@ type MetaMap = Map<ID, Map<Index, Entry>>;
 
 export default class State<T = any> {
 	private objects: MetaMap;
-	private readonly changes: BackendChange[];
+	private clock: number;
 
-	constructor(private clock: number = 0) {
+	constructor(private changes: BackendChange[]) {
 		this.objects = State.initObjects();
-		this.changes = [];
+		this.clock = changes[changes.length - 1]?.clock ?? 0;
+		this.reapplyAllChanges();
 	}
 
 	private static initObjects(): Map<ID, Map<Index, Entry>> {
