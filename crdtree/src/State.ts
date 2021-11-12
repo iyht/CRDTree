@@ -189,15 +189,13 @@ export default class State<T = any> {
 	}
 
 	private static assignToList(parent: Array<Entry>, at: Index, item: ObjectPrimitive): void {
-		const {value, name, kind} = item;
 		const trueIndex = State.findIndexInTombstoneArray(parent, State.ensureNumber(at));
 		if (trueIndex < 0) {
 			throw new RangeError("Cannot assign to something that does not exist");
 		}
 		const oldEntry = parent[trueIndex];
-		// const {name, value} = oldEntry;
-		parent[trueIndex] = {...oldEntry, name, value, kind};
-		// State.insertInList(parent, trueIndex + 1, name, value);
+		parent[trueIndex] = {...oldEntry, deleted: true};
+		State.insertInList(parent, trueIndex + 1, item);
 	}
 
 	private static insertInList(parent: Array<Entry>, index: number, item: ObjectPrimitive): void {
