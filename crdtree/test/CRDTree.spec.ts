@@ -261,7 +261,8 @@ describe("CRDTree", () => {
 			it("should resolve moving indices in a list", () => {
 				crdtA.assign([], []);
 				crdtA.insert([0], "target");
-				expect(crdtA).to.merge(crdtB).as(["target"]);
+				crdtA.insert([1], "after after");
+				expect(crdtA).to.merge(crdtB).as(["target", "after after"]);
 
 				crdtA.insert([0], "before");
 				crdtA.insert([2], "after");
@@ -275,6 +276,12 @@ describe("CRDTree", () => {
 					"after before, but still before",
 					"target",
 					"after",
+					"after after",
+				]);
+
+				expect(crdtB).to.render([
+					"hit!",
+					"after after",
 				]);
 
 				expect(crdtA).to.merge(crdtB).as([
@@ -283,6 +290,7 @@ describe("CRDTree", () => {
 					"after before, but still before",
 					"hit!",
 					"after",
+					"after after",
 				]);
 			});
 
