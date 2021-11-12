@@ -1,4 +1,4 @@
-import {ID, Index} from "./types/Types";
+import {ID, Index, Timestamp} from "./types/Types";
 import {ROOT, ROOT_PARENT} from "./Constants";
 import {BackendChange, Change} from "./types/Change";
 import {
@@ -25,18 +25,34 @@ type MetaMap = Map<ID, MetaObject>;
 
 export default class State<T = any> {
 	private objects: MetaMap;
+	private seen: Set<ID>;
 	private clock: number;
 
 	constructor(private readonly changes: BackendChange[]) {
-		this.objects = State.initObjects();
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
+		this.seen = new Set<ID>();
+		this.changes.forEach((change) => this.witness(change));
 		this.reapplyAllChanges();
 	}
 
-	private static initObjects(): Map<ID, Map<Index, Entry>> {
+	public has(change: Change): boolean {
+		return this.seen.has(State.toID(change));
+	}
+
+	private witness(change: Change): void {
+		this.seen.add(State.toID(change));
+	}
+
+	// TODO shouldn't be here
+	private static toID(change: Change): ID {
+		const {pid, clock} = change;
+		return `${pid}@${clock}` as ID;
+	}
+
+	private initObjects(): void {
 		const rootParent = new Map<Index, Entry>()
 			.set(ROOT, {name: undefined, value: undefined, deleted: true});
-		return new Map<ID, Map<Index, Entry>>()
+		this.objects = new Map<ID, Map<Index, Entry>>()
 			.set(ROOT_PARENT, rootParent);
 	}
 
@@ -76,6 +92,7 @@ export default class State<T = any> {
 
 	public addChange(change: Change): BackendChange {
 		change = State.ensureBackendChange(change);
+		this.witness(change);
 		const {clock} = change;
 		if (clock > this.clock) {
 			this.appendChange(change);
@@ -117,10 +134,17 @@ export default class State<T = any> {
 	private insertChange(change: BackendChange): void {
 		// TODO something with the change itself. idk where it goes lol
 		this.changes.push(change);
+		this.changes.sort((a, b) => {
+			if (State.clockLt(a, b)) {
+				return -1;
+			} else {
+				return 1;
+			}
+		});
 	}
 
 	private reapplyAllChanges(): void {
-		this.objects = State.initObjects();
+		this.initObjects();
 		this.changes.forEach((change: BackendChange) =>
 			this.applyChange(change));
 	}
@@ -171,8 +195,9 @@ export default class State<T = any> {
 			throw new RangeError("Cannot assign to something that does not exist");
 		}
 		const oldEntry = parent[trueIndex];
-		parent[trueIndex] = {...oldEntry, deleted: true};
-		State.insertInList(parent, trueIndex + 1, name, value);
+		// const {name, value} = oldEntry;
+		parent[trueIndex] = {...oldEntry, value};
+		// State.insertInList(parent, trueIndex + 1, name, value);
 	}
 
 	private static insertInList(parent: Array<Entry>, index: number, name: ID, value: BasePrimitive): void {
@@ -229,14 +254,22 @@ export default class State<T = any> {
 
 	// TODO this code should not live here either
 	private static nameLt(a: ID, b: ID): boolean {
-		const [aPid, aClockString] = a.split("@");
-		const [bPid, bClockString] = b.split("@");
-		const aClock = Number(aClockString);
-		const bClock = Number(bClockString);
-		if (aClock < bClock) return true;
-		if (bClock < aClock) return false;
-		if (aPid < bPid) return true;
-		if (bPid < aPid) return false;
+		return State.clockLt(State.toTimestamp(a), State.toTimestamp(b));
+	}
+
+	// TODO this code should not live here either
+	private static toTimestamp(id: ID): Timestamp {
+		const [pid, clockString] = id.split("@");
+		const clock = Number(clockString);
+		return {pid, clock};
+	}
+
+	// TODO this code should not live here either
+	private static clockLt(a: Timestamp, b: Timestamp): boolean {
+		if (a.clock < b.clock) return true;
+		if (b.clock < a.clock) return false;
+		if (a.pid < b.pid) return true;
+		if (b.pid < a.pid) return false;
 		throw new EvalError("Two items in list with same name should be impossible");
 	}
 
@@ -255,7 +288,7 @@ export default class State<T = any> {
 	}
 
 	public listChanges(): BackendChange[] {
-		return this.changes;
+		return this.changes.slice();
 	}
 
 	public render(): T {

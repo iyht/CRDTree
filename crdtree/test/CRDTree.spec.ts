@@ -267,7 +267,15 @@ describe("CRDTree", () => {
 				crdtA.insert([2], "after");
 				crdtA.insert([0], "before before");
 				crdtB.assign([0], "hit!");
-				crdtA.insert([1], "after before, but still before");
+				crdtA.insert([2], "after before, but still before");
+
+				expect(crdtA).to.render([
+					"before before",
+					"before",
+					"after before, but still before",
+					"target",
+					"after",
+				]);
 
 				expect(crdtA).to.merge(crdtB).as([
 					"before before",
@@ -355,7 +363,7 @@ describe("CRDTree", () => {
 					crdtA.assign(["foo", 0, "bar"], 0);
 					expect(crdtA).to.merge(crdtB).as({foo: [{bar: 0}]});
 
-					crdtA.delete(["foo", 0]);
+					crdtA.delete(["foo"]);
 					crdtB.assign(["foo", 0, "bar"], 20);
 
 					expect(crdtA).to.render({});
@@ -369,7 +377,7 @@ describe("CRDTree", () => {
 			it("should handle an update for a list it hasn't gotten an assignment for yet");
 
 			describe("conflicting assignment", () => {
-				it("should be fine if two processes assign the same value to the same variable" , () => {
+				it("should be fine if two processes assign the same value to the same variable", () => {
 					crdtA.assign(["foo"], "bar");
 					crdtB.assign(["foo"], "bar");
 					expect(crdtA).to.merge(crdtB).as({foo: "bar"});

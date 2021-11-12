@@ -18,7 +18,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	constructor(from: CRDTreeTransport<T> = []) {
 		this.callbacks = [];
-		this.pid = String(Date.now()); // TODO lol
+		this.pid = String(Date.now()) + String(Math.random() * 1000); // TODO lol
 		this.state = new State<T>(from);
 	}
 
@@ -93,7 +93,8 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
 		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
-		changes.forEach((change: BackendChange) => this.insertChange(change));
+		changes.filter((change: BackendChange) => !this.state.has(change))
+			.forEach((change: BackendChange) => this.insertChange(change));
 
 		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================
 		return [];
