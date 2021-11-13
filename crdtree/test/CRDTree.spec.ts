@@ -207,9 +207,9 @@ describe("CRDTree", () => {
 			let crdtB: ICRDTree;
 
 			beforeEach(() => {
-				crdtA = new CRDTree();
+				crdtA = new CRDTree([], "A");
 				crdtA.assign([], {});
-				crdtB = new CRDTree(crdtA.serialize());
+				crdtB = new CRDTree(crdtA.serialize(), "B");
 			});
 
 			it("should be able to merge into self as a no-op", () => {
