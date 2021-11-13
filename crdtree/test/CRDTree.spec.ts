@@ -29,11 +29,14 @@ describe("CRDTree", () => {
 				});
 			});
 
-			xit("should only allow JSON serializable data", () => {
-				// Maybe we should just let the type system prevent this.
+			it("should only allow JSON serializable data", () => {
 				[undefined, (x) => x(x), NaN].forEach((data: unknown) => {
 					expect(() => {
 						crdt.assign([], data as FrontendPrimitive);
+					}).to.throw(Error);
+					expect(() => {
+						crdt.assign([], []);
+						crdt.insert([0], data as FrontendPrimitive);
 					}).to.throw(Error);
 				});
 			});
@@ -558,8 +561,7 @@ describe("CRDTree", () => {
 					expect(crdtA).to.render({todo: []});
 					expect(crdtB).to.render({todo: [{title: "buy milk", done: true}]});
 
-					// expect(crdtA).to.merge(crdtB).as({todo: [{done: true}]}); // paper behaviour
-					expect(crdtA).to.merge(crdtB).as({todo: []}); // automerge behaviour
+					expect(crdtA).to.merge(crdtB).as({todo: []});
 				});
 			});
 		});
@@ -568,7 +570,7 @@ describe("CRDTree", () => {
 			it("should eventually call onUpdate", (done: Done) => {
 				const crdt: ICRDTree = new CRDTree();
 				crdt.onUpdate((update) => {
-					expect(update).to.exist; // TODO need more information than this
+					expect(update).to.exist;
 					done();
 				});
 				crdt.assign([], "foo");
