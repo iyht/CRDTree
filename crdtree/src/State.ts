@@ -72,18 +72,20 @@ export default class State<T = any> {
 	}
 
 	public addChange(changes: Change[]): BackendChange[] {
-		const backendChanges = changes.map(ensureBackendChange);
+		const backendChanges = changes
+			.filter((change) => !this.seen(change))
+			.map(ensureBackendChange);
+		this.witness(backendChanges);
 		for (const change of backendChanges) {
-			if (!this.seen(change)) {
-				this.witness([change]);
-				const {clock} = change;
-				if (clock > this.clock) {
-					this.appendChange(change);
-					this.applyChange(change);
-				} else {
-					this.insertChange(change);
-					this.reapplyAllChanges();
-				}
+			const {clock} = change;
+			if (clock > this.clock) {
+				this.appendChange(change);
+				this.applyChange(change);
+			} else {
+				const remainder = backendChanges.slice(backendChanges.indexOf(change));
+				this.insertChanges(remainder);
+				this.reapplyAllChanges();
+				break;
 			}
 		}
 		return backendChanges;
@@ -94,8 +96,8 @@ export default class State<T = any> {
 		this.changes.push(change);
 	}
 
-	private insertChange(change: BackendChange): void {
-		this.changes.push(change);
+	private insertChanges(changes: BackendChange[]): void {
+		this.changes.push(...changes);
 		this.changes.sort((a, b) => {
 			if (changeLt(a, b)) {
 				return -1;
