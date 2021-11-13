@@ -135,6 +135,11 @@ export default class State<T = any> {
 	}
 
 	private insertChange(change: BackendChange): void {
+		if (change.action.kind === ActionKind.DELETE) {
+			// TODO if deletion, insert as early as possible
+		} else {
+			// TODO else insert as late as possible
+		}
 		this.changes.push(change);
 		this.changes.sort((a, b) => {
 			if (State.clockLt(a, b)) {
