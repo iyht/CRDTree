@@ -1,4 +1,4 @@
-import {ID} from "./types/Types";
+import {ID} from "./API";
 
 export enum ObjectKind {
 	ARRAY,

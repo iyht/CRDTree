@@ -1,5 +1,4 @@
-
-import {ID} from "./types/Types";
+import {ID} from "./API";
 
 type Timestamp = {clock: number, pid: string};
 

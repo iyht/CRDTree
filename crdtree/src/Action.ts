@@ -1,4 +1,4 @@
-import {HEAD, ID, Index} from "./Types";
+import {ID, Index} from "./API";
 import {BackendPrimitive, FrontendPrimitive} from "./Primitive";
 
 export enum ActionKind {
@@ -24,7 +24,7 @@ export type BackendAssignment = BaseAssignment & { item: BackendPrimitive };
 export type BackendListAssignment = ListAssignment & { item: BackendPrimitive };
 type BaseInsertion = {
 	kind: ActionKind.INSERT;
-	after: ID | HEAD;
+	after: ID;
 	in: ID;
 };
 type FrontendInsertion = BaseInsertion & { item: FrontendPrimitive };
@@ -37,9 +37,9 @@ export type Deletion = {
 export type NoOp = {
 	kind: ActionKind.NOOP;
 };
-type BaseAction = Deletion | NoOp;
-export type FrontendAction = BaseAction | FrontendAssignment | FrontendInsertion;
-export type BackendAction = BaseAction | BackendAssignment | BackendListAssignment | BackendInsertion;
+type Action = Deletion | NoOp;
+export type FrontendAction = Action | FrontendAssignment | FrontendInsertion;
+export type BackendAction = Action | BackendAssignment | BackendListAssignment | BackendInsertion;
 
 const backendActionIsKind = (kind: ActionKind) =>
 	(action: BackendAction) => action.kind === kind;

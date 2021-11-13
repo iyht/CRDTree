@@ -1,5 +1,5 @@
 import {Entry} from "./StateObject";
-import {ID} from "./types/Types";
+import {ID} from "./API";
 import {ObjectPrimitive} from "./Primitive";
 import {BackendInsertion} from "./types/BaseAction";
 import {nameLt} from "./Clock";

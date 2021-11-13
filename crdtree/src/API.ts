@@ -1,11 +1,9 @@
-import {CRDTreeTransport} from "../CRDTree";
+import {CRDTreeTransport} from "./CRDTree";
 import {FrontendPrimitive} from "./Primitive";
+import {HEAD, ROOT, ROOT_PARENT} from "./Constants";
 
 export type ID = `${string}@${number}` | HEAD | ROOT | ROOT_PARENT;
 export type Index = number | string;
-export type ROOT = "ROOT";
-export type ROOT_PARENT = "PARENT";
-export type HEAD = "HEAD";
 
 export interface ICRDTree<T = any> {
 	render(): T;

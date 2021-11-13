@@ -1,6 +1,6 @@
-import {ID, Index} from "./types/Types";
+import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, toID} from "./Change";
+import {BackendChange, Change, ensureBackendChange, toID} from "./Change";
 import {
 	ActionKind,
 	BackendAssignment,
@@ -12,12 +12,7 @@ import {
 	isBackendListAssignment,
 	isDeletion
 } from "./types/BaseAction";
-import {
-	BackendPrimitive,
-	isBackendPrimitive,
-	ObjectKind,
-	toObjectPrimitive
-} from "./Primitive";
+import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {clockLt} from "./Clock";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
@@ -78,7 +73,7 @@ export default class State<T = any> {
 	}
 
 	public addChange(change: Change): BackendChange {
-		change = State.ensureBackendChange(change);
+		change = ensureBackendChange(change);
 		this.witness(change);
 		const {clock} = change;
 		if (clock > this.clock) {
@@ -89,19 +84,6 @@ export default class State<T = any> {
 			this.reapplyAllChanges();
 		}
 		return change;
-	}
-
-	private static ensureBackendChange(change: Change): BackendChange {
-		const {kind} = change.action;
-		if (kind === ActionKind.DELETE || kind === ActionKind.NOOP || isBackendPrimitive(change.action.item)) {
-			return change as BackendChange;
-		} else {
-			const {pid, clock} = change;
-			const name: ID = `${pid}@${clock}`;
-			const item = toObjectPrimitive(name, change.action.item);
-			const action = {...change.action, item};
-			return {...change, action};
-		}
 	}
 
 	private appendChange(change: BackendChange): void {
