@@ -1,4 +1,4 @@
-import {CRDTreeTransport} from "./CRDTree";
+import {CRDTreeTransport} from "./API";
 
 type ipv4addr = [number, string];
 

@@ -1,12 +1,10 @@
 import State from "./State";
-import {ICRDTree, ID, Index} from "./API";
+import {CRDTreeTransport, ICRDTree, ID, Index} from "./API";
 import {ROOT} from "./Constants";
 import {BackendChange, Change} from "./Change";
 import {ActionKind, FrontendAction} from "./Action";
 import {FrontendPrimitive} from "./Primitive";
 import {assertSerializable} from "./Util";
-
-export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;

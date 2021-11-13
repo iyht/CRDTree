@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {RootNetwork} from "../src/RootNetwork";
-import {CRDTreeTransport} from "../src/CRDTree";
+import {CRDTreeTransport} from "../src/API";
 
 /*
 
