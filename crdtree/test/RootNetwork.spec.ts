@@ -1,6 +1,8 @@
 import {expect} from "chai";
 import {RootNetwork} from "../src/RootNetwork";
-import {CRDTreeTransport, Operation} from "../src/CRDTree";
+import {CRDTreeTransport} from "../src/API";
+
+/*
 
 describe("RootNetwork", () => {
 	describe("Initialization tests", () => {
@@ -87,19 +89,4 @@ describe("RootNetwork", () => {
 	});
 });
 
-
-describe("Lamport Clock", () =>{
-	describe("Initialization tests", () => {
-
-	});
-	describe("Get timestamp", () => {
-
-	});
-	describe("Update timestamp", () => {
-
-	});
-	describe("Compare two clock", () => {
-
-	});
-
-});
+ */

@@ -1,5 +1,4 @@
-import { time } from "streaming-iterables";
-import {CRDTreeTransport} from "./CRDTree";
+import {CRDTreeTransport} from "./API";
 
 type ipv4addr = [number, string];
 
@@ -64,7 +63,7 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		// after establishing the socket, replies back all known nodes
 		// may learn about new nodes from connecting node
 	}
-	
+
 	get_connected_roots(): ipv4addr[]{
 		return;
 	};
