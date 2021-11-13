@@ -23,16 +23,17 @@ export default class State<T = any> {
 	constructor(private readonly changes: BackendChange[]) {
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
 		this._seen = new Set<ID>();
-		this.changes.forEach((change) => this.witness(change));
+		this.witness(this.changes);
 		this.reapplyAllChanges();
 	}
 
-	public seen(change: Change): boolean {
+	private seen(change: Change): boolean {
 		return this._seen.has(toID(change));
 	}
 
-	private witness(change: Change): void {
-		this._seen.add(toID(change));
+	private witness(changes: Change[]): void {
+		changes.map(toID)
+			.forEach((id: ID) => this._seen.add(id));
 	}
 
 	public next(): number {
@@ -72,14 +73,16 @@ export default class State<T = any> {
 
 	public addChange(change: Change): BackendChange {
 		change = ensureBackendChange(change);
-		this.witness(change);
-		const {clock} = change;
-		if (clock > this.clock) {
-			this.appendChange(change);
-			this.applyChange(change);
-		} else {
-			this.insertChange(change);
-			this.reapplyAllChanges();
+		if (!this.seen(change)) {
+			this.witness([change]);
+			const {clock} = change;
+			if (clock > this.clock) {
+				this.appendChange(change);
+				this.applyChange(change);
+			} else {
+				this.insertChange(change);
+				this.reapplyAllChanges();
+			}
 		}
 		return change;
 	}

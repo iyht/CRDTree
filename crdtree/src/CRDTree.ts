@@ -99,8 +99,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
 		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
-		changes.filter((change: BackendChange) => !this.state.seen(change))
-			.forEach((change: BackendChange) => this.insertChange(change));
+		changes.forEach((change: BackendChange) => this.insertChange(change));
 
 		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================
 		return [];
