@@ -9,11 +9,15 @@ import {assertSerializable} from "./Util";
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
 	private readonly state: State<T>;
-	private readonly pid: string;
+	private pid: string;
 
-	constructor(from: CRDTreeTransport<T> = []) {
+	constructor(from: CRDTreeTransport<T> = [], pid? :string) {
 		this.callbacks = [];
-		this.pid = String(Date.now()) + String(Math.random() * 1000); // TODO lol
+		if(typeof pid !== 'undefined'){
+			this.pid = pid;
+		}else{
+			this.pid = String(Date.now()) + String(Math.random() * 1000); // TODO lol
+		}
 		this.state = new State<T>(from);
 	}
 
@@ -37,6 +41,14 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	private getParentElement(indices: Index[]): ID {
 		return this.state.getParentElement(indices);
+	}
+
+	public getPid(): string{
+		return this.pid;
+	}
+
+	public assignPid(pid: string): void{
+		this.pid = pid;
 	}
 
 	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {

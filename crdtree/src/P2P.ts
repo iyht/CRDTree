@@ -7,7 +7,7 @@ const wrtc = require('wrtc') // WebRTC in js
 const { NOISE } = require('libp2p-noise') // connection encryption
 
 const Mplex = require('libp2p-mplex') // stream multiplexing for reusing connection
-// const MulticastDNS = require('libp2p-mdns')
+const MulticastDNS = require('libp2p-mdns')
 
 
 const createNode = async () => {
@@ -28,15 +28,18 @@ const createNode = async () => {
   return node
 }
 
-;(async () => {
 
-  const [node1, node2] = await Promise.all([
-        createNode(), 
-        createNode()
-  ])
-  console.log(node1.peerId.toB58String())
-  console.log(node2.peerId.toB58String())
-})();
+// ;(async () => {
+
+//   const [node1, node2] = await Promise.all([
+//         createNode(), 
+//         createNode()
+//   ])
+//   console.log(node1.peerId.toB58String())
+//   console.log(node2.peerId.toB58String())
+// })();
+
+export {createNode};
 
 // console.log(node.peerId.toB58String())
 // ;(async () => {
