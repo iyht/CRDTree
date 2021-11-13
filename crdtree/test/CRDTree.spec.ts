@@ -4,6 +4,7 @@ import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
 import {ICRDTree} from "../src/API";
 import {FrontendPrimitive} from "../src/Primitive";
+import {readResource} from "./util/utils";
 
 describe("CRDTree", () => {
 
@@ -574,6 +575,28 @@ describe("CRDTree", () => {
 					done();
 				});
 				crdt.assign([], "foo");
+			});
+		});
+
+		describe("stress test", () => {
+			const text = readResource("text.txt");
+			const reversedCharacters = text.split("").reverse();
+			const insertAllCharsAt = (tree: CRDTree, at: number) =>
+				reversedCharacters.forEach((char) =>
+					tree.insert([at], char));
+
+			it("should perform reasonably with many insertions", function () {
+				this.timeout(1000);
+				const crdtA = new CRDTree([], "A");
+				crdtA.assign([], []);
+				crdtA.insert([0], "@");
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+
+				insertAllCharsAt(crdtA, 0);
+				insertAllCharsAt(crdtB, 1);
+
+				expect(crdtA).to.merge(crdtB);
+				expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
 			});
 		});
 	});
