@@ -38,4 +38,12 @@ const changeLt = (a: Change, b: Change): boolean => {
 	throw new EvalError("Two items in list with same name should be impossible");
 };
 
-export {toID, ensureBackendChange, changeLt};
+const changeSortCompare = (a: Change, b: Change): number => {
+	if (changeLt(a, b)) {
+		return -1;
+	} else {
+		return 1;
+	}
+};
+
+export {toID, ensureBackendChange, changeLt, changeSortCompare};

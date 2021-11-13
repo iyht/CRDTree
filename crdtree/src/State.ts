@@ -1,6 +1,6 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, changeLt, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeLt, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
 	BackendInsertion,
@@ -74,44 +74,38 @@ export default class State<T = any> {
 	public addChange(changes: Change[]): BackendChange[] {
 		const backendChanges = changes
 			.filter((change) => !this.seen(change))
-			.map(ensureBackendChange);
+			.map(ensureBackendChange)
+			.sort(changeSortCompare);
 		this.witness(backendChanges);
-		for (const change of backendChanges) {
-			const {clock} = change;
-			if (clock > this.clock) {
-				this.appendChange(change);
-				this.applyChange(change);
-			} else {
-				const remainder = backendChanges.slice(backendChanges.indexOf(change));
-				this.insertChanges(remainder);
-				this.reapplyAllChanges();
-				break;
-			}
+		if (backendChanges.length > 0 && backendChanges[0].clock > this.clock) {
+			this.appendChanges(backendChanges);
+			this.applyChanges(backendChanges);
+		} else if (backendChanges.length > 0) {
+			this.insertChanges(backendChanges);
+			this.reapplyAllChanges();
 		}
 		return backendChanges;
 	}
 
-	private appendChange(change: BackendChange): void {
-		this.clock = change.clock;
-		this.changes.push(change);
+	private appendChanges(changes: BackendChange[]): void {
+		this.clock = changes[changes.length - 1].clock;
+		this.changes.push(...changes);
 	}
 
 	private insertChanges(changes: BackendChange[]): void {
 		this.changes.push(...changes);
-		this.changes.sort((a, b) => {
-			if (changeLt(a, b)) {
-				return -1;
-			} else {
-				return 1;
-			}
-		});
+		this.changes.sort(changeSortCompare);
 	}
 
 	private reapplyAllChanges(): void {
 		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
-		this.changes.forEach((change: BackendChange) => this.applyChange(change));
+		this.applyChanges(this.changes);
+	}
+
+	private applyChanges(changes: BackendChange[]): void {
+		changes.forEach((change: BackendChange) => this.applyChange(change));
 	}
 
 	private applyChange(change: BackendChange): void {
