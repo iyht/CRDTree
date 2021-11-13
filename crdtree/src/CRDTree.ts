@@ -19,17 +19,17 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private makeChange(action: FrontendAction): void {
-		const backendChange = this.insertChange({
+		const backendChanges = this.insertChanges([{
 			action: action,
 			clock: this.state.next(),
 			pid: this.pid,
-		});
+		}]);
 		this.callbacks.forEach((callback) =>
-			setImmediate(callback, [backendChange]));
+			setImmediate(callback, backendChanges));
 	}
 
-	private insertChange(change: Change): BackendChange {
-		return this.state.addChange(change);
+	private insertChanges(changes: Change[]): BackendChange[] {
+		return this.state.addChange(changes);
 	}
 
 	private getElement(indices: Index[]): ID {
@@ -99,7 +99,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
 		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
-		changes.forEach((change: BackendChange) => this.insertChange(change));
+		this.insertChanges(changes);
 
 		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================
 		return [];

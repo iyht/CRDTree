@@ -71,20 +71,22 @@ export default class State<T = any> {
 		return maybeNumber; // definitely number
 	}
 
-	public addChange(change: Change): BackendChange {
-		change = ensureBackendChange(change);
-		if (!this.seen(change)) {
-			this.witness([change]);
-			const {clock} = change;
-			if (clock > this.clock) {
-				this.appendChange(change);
-				this.applyChange(change);
-			} else {
-				this.insertChange(change);
-				this.reapplyAllChanges();
+	public addChange(changes: Change[]): BackendChange[] {
+		const backendChanges = changes.map(ensureBackendChange);
+		for (const change of backendChanges) {
+			if (!this.seen(change)) {
+				this.witness([change]);
+				const {clock} = change;
+				if (clock > this.clock) {
+					this.appendChange(change);
+					this.applyChange(change);
+				} else {
+					this.insertChange(change);
+					this.reapplyAllChanges();
+				}
 			}
 		}
-		return change;
+		return backendChanges;
 	}
 
 	private appendChange(change: BackendChange): void {
