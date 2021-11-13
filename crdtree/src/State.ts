@@ -1,8 +1,7 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeLt, ensureBackendChange, toID} from "./Change";
 import {
-	ActionKind,
 	BackendAssignment,
 	BackendInsertion,
 	BackendListAssignment,
@@ -13,7 +12,6 @@ import {
 	isDeletion
 } from "./Action";
 import {BackendPrimitive, ObjectKind} from "./Primitive";
-import {clockLt} from "./Clock";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
 
@@ -92,14 +90,9 @@ export default class State<T = any> {
 	}
 
 	private insertChange(change: BackendChange): void {
-		if (change.action.kind === ActionKind.DELETE) {
-			// TODO if deletion, insert as early as possible
-		} else {
-			// TODO else insert as late as possible
-		}
 		this.changes.push(change);
 		this.changes.sort((a, b) => {
-			if (clockLt(a, b)) {
+			if (changeLt(a, b)) {
 				return -1;
 			} else {
 				return 1;
