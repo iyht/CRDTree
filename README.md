@@ -23,7 +23,7 @@ Requirements for Milestone 2 include:
 - **NFR1**: Merges should terminate in a reasonable amount of time, less than a second
   - NOT YET DEMONSTRATED
 - **NFR2**: Memory allocation should scale at worst polynomially in operations
-  - This test was born out of some scary things we saw in the original algorithm by [Kleppmann et al.](https://arxiv.org/abs/1608.03960), although by keeping our semantics simple we were able to do away with some of their requirements and maintained linear memory usage. You would need to read the code to see this :(  
+  - This test was born out of some scary things we saw in the original algorithm by [Kleppmann et al.](https://arxiv.org/abs/1608.03960), however by keeping our semantics simple we were able to do away with some of their requirements and maintained linear storage usage (if you don't count all the arrays we let get garbage collected). You would need to read the code to see this :(  
 
 ## Development
 ### Requirements
