@@ -5,9 +5,11 @@ import {
 	ActionKind,
 	BackendAssignment,
 	BackendInsertion,
+	BackendListAssignment,
 	Deletion,
 	isBackendAssignment,
 	isBackendInsertion,
+	isBackendListAssignment,
 	isDeletion
 } from "./types/BaseAction";
 import {
@@ -19,7 +21,7 @@ import {
 	ObjectPrimitive
 } from "./types/Primitive";
 
-type Entry = { name: ID, kind: ObjectKind, value: BasePrimitive, deleted: boolean };
+type Entry = { name: ID, kind: ObjectKind, value: BasePrimitive | ID, deleted: boolean };
 type MetaObject = Map<Index, Entry> | Array<Entry>;
 type MetaMap = Map<ID, MetaObject>;
 
@@ -79,7 +81,8 @@ export default class State<T = any> {
 			} else {
 				entry = metaObject[State.findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
 			}
-			return entry?.deleted ? undefined : entry?.name;
+			return entry?.deleted ? undefined :
+				entry?.kind === ObjectKind.OTHER ? entry?.name : (entry?.value as ID);
 		}, ROOT_PARENT) as ID;
 	}
 
@@ -120,7 +123,7 @@ export default class State<T = any> {
 	// TODO def shouldn't be in this file
 	private static toObjectPrimitive(name: ID, item: FrontendPrimitive): ObjectPrimitive {
 		if (typeof item === "object" && item !== null) {
-			return {name, value: undefined, kind: Array.isArray(item) ? ObjectKind.ARRAY : ObjectKind.OBJECT};
+			return {name, value: name, kind: Array.isArray(item) ? ObjectKind.ARRAY : ObjectKind.OBJECT};
 		} else {
 			return {name, value: item as BasePrimitive, kind: ObjectKind.OTHER};
 		}
@@ -152,6 +155,8 @@ export default class State<T = any> {
 		const {action} = change;
 		if (isBackendAssignment(action)) {
 			this.applyAssignment(action);
+		} else if (isBackendListAssignment(action)) {
+			this.applyListAssignment(action);
 		} else if (isBackendInsertion(action)) {
 			this.applyInsertion(action);
 		} else if (isDeletion(action)) {
@@ -181,21 +186,32 @@ export default class State<T = any> {
 		const {name, value, kind} = item;
 		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
-			State.assignToList(parent, at, item);
+			throw new EvalError("Key assignment into a list should never happen");
 		} else {
 			parent.set(at, {name, value, kind, deleted: false});
 		}
 		this.createMetaObject(item);
 	}
 
-	private static assignToList(parent: Array<Entry>, at: Index, item: ObjectPrimitive): void {
-		const trueIndex = State.findIndexInTombstoneArray(parent, State.ensureNumber(at));
+	private applyListAssignment(assignment: BackendListAssignment): void {
+		const {item, at, in: _in} = assignment;
+		const parent = this.getMetaObject(_in);
+		if (Array.isArray(parent)) {
+			State.assignToList(parent, at, item);
+		} else {
+			throw new EvalError("Index assignment into an object should never happen");
+		}
+		this.createMetaObject(item);
+	}
+
+	private static assignToList(parent: Array<Entry>, at: ID, item: ObjectPrimitive): void {
+		const trueIndex = parent.findIndex((entry) => entry.name === at);
 		if (trueIndex < 0) {
 			throw new RangeError("Cannot assign to something that does not exist");
 		}
 		const oldEntry = parent[trueIndex];
-		parent[trueIndex] = {...oldEntry, deleted: true};
-		State.insertInList(parent, trueIndex + 1, item);
+		parent[trueIndex] = {...oldEntry, value: item.value, kind: item.kind, deleted: false};
+		// State.insertInList(parent, trueIndex + 1, item);
 	}
 
 	private static insertInList(parent: Array<Entry>, index: number, item: ObjectPrimitive): void {
@@ -313,13 +329,13 @@ export default class State<T = any> {
 	}
 
 	private renderRecursive(entry: Entry): any {
-		if (entry.kind !== ObjectKind.OTHER) {
-			const {name} = entry;
-			const metaObject = this.getMetaObject(name as ID);
+		const {value, kind} = entry;
+		if (kind !== ObjectKind.OTHER) {
+			const metaObject = this.getMetaObject(value as ID);
 			return Array.isArray(metaObject) ?
 				this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
 		} else {
-			return entry.value;
+			return value;
 		}
 	}
 }

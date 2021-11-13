@@ -1,9 +1,5 @@
 import State from "./State";
-import {
-	ICRDTree,
-	ID,
-	Index
-} from "./types/Types";
+import {ICRDTree, ID, Index} from "./types/Types";
 import {ROOT} from "./Constants";
 import {BackendChange, Change} from "./types/Change";
 import {ActionKind, FrontendAction} from "./types/BaseAction";
@@ -52,11 +48,15 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 				at: last,
 				in: this.getParentElement(indices),
 				item,
-				kind: ActionKind.ASSIGN
+				kind: ActionKind.ASSIGN,
 			});
 		} else {
-			this.insert([...indices.slice(0, -1), last + 1], item);
-			this.delete(indices);
+			this.makeChange({
+				at: this.getElement(indices),
+				in: this.getParentElement(indices),
+				item,
+				kind: ActionKind.ASSIGN_LIST,
+			});
 		}
 	}
 
