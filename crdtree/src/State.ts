@@ -11,7 +11,7 @@ import {
 	isBackendInsertion,
 	isBackendListAssignment,
 	isDeletion
-} from "./types/BaseAction";
+} from "./Action";
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {clockLt} from "./Clock";
 import {Entry, MetaMap, MetaObject} from "./StateObject";

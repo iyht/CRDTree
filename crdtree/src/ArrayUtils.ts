@@ -1,7 +1,7 @@
 import {Entry} from "./StateObject";
 import {ID} from "./API";
 import {ObjectPrimitive} from "./Primitive";
-import {BackendInsertion} from "./types/BaseAction";
+import {BackendInsertion} from "./Action";
 import {nameLt} from "./Clock";
 
 const assignToList = (parent: Array<Entry>, at: ID, item: ObjectPrimitive): void => {

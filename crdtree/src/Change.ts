@@ -1,4 +1,4 @@
-import {ActionKind, BackendAction, FrontendAction} from "./types/BaseAction";
+import {ActionKind, BackendAction, FrontendAction} from "./Action";
 import {ID} from "./API";
 import {isBackendPrimitive, toObjectPrimitive} from "./Primitive";
 
