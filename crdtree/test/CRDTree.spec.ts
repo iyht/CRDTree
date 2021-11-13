@@ -161,6 +161,7 @@ describe("CRDTree", () => {
 
 				expect(() => crdt.assign(["list", "0"], 10)).to.throw(Error);
 				expect(() => crdt.insert([0], 10)).to.throw(Error);
+				expect(() => crdt.assign([0], 10)).to.throw(Error);
 			});
 
 			it("should enforce a deletion", () => {
