@@ -4,6 +4,7 @@ import {ROOT} from "./Constants";
 import {BackendChange, Change} from "./Change";
 import {ActionKind, FrontendAction} from "./Action";
 import {FrontendPrimitive} from "./Primitive";
+import {assertSerializable} from "./Util";
 
 export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
@@ -18,25 +19,10 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.state = new State<T>(from);
 	}
 
-	// TODO this code should not live here
-	private static assertSerializable(item: unknown): void {
-		let json, copy;
-		try {
-			json = JSON.stringify(item);
-			copy = JSON.parse(json);
-		} catch (err) {
-			// suppress
-		}
-		if ((json !== "{}" && json !== "[]" && copy !== item) || item === undefined) {
-			throw new Error("Input must be JSON serializable and atomic");
-		}
-	}
-
 	private makeChange(action: FrontendAction): void {
 		const backendChange = this.insertChange({
 			action: action,
 			clock: this.state.next(),
-			// deps: [], // TODO probably need this but not sure how it works just yet?
 			pid: this.pid,
 		});
 		this.callbacks.forEach((callback) =>
@@ -56,7 +42,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {
-		CRDTree.assertSerializable(item);
+		assertSerializable(item);
 		const last = indices[indices.length - 1] ?? (ROOT as Index);
 		if (typeof last === "string") {
 			this.makeChange({
@@ -76,7 +62,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public insert<U extends FrontendPrimitive = any>(indices: [...Index[], number], item: U): void {
-		CRDTree.assertSerializable(item);
+		assertSerializable(item);
 		const last: number = indices[indices.length - 1] as number;
 		this.makeChange({
 			after: this.getElement([...indices.slice(0, -1), last - 1]),
