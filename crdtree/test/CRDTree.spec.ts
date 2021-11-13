@@ -233,7 +233,7 @@ describe("CRDTree", () => {
 				crdtA = new CRDTree([], node1.peerId.toB58String());
 				crdtA.assign([], {});
 				crdtB = new CRDTree(crdtA.serialize(), node2.peerId.toB58String());
-				crdtA.merge(crdtA);
+				crdtA.merge(crdtB);
 				expect(crdtA).to.render({});
 			});
 
