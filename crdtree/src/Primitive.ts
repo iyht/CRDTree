@@ -1,4 +1,4 @@
-import {ID} from "./Types";
+import {ID} from "./types/Types";
 
 export enum ObjectKind {
 	ARRAY,
@@ -25,4 +25,12 @@ const isBackendPrimitive = (unknown: unknown): unknown is BackendPrimitive => {
 		typeof unknown["name"] === "string";
 };
 
-export {isBasePrimitive, isBackendPrimitive};
+const toObjectPrimitive = (name: ID, item: FrontendPrimitive): ObjectPrimitive => {
+	if (typeof item === "object" && item !== null) {
+		return {name, value: name, kind: Array.isArray(item) ? ObjectKind.ARRAY : ObjectKind.OBJECT};
+	} else {
+		return {name, value: item as BasePrimitive, kind: ObjectKind.OTHER};
+	}
+};
+
+export {isBasePrimitive, isBackendPrimitive, toObjectPrimitive};

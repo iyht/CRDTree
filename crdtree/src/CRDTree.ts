@@ -1,9 +1,9 @@
 import State from "./State";
 import {ICRDTree, ID, Index} from "./types/Types";
 import {ROOT} from "./Constants";
-import {BackendChange, Change} from "./types/Change";
+import {BackendChange, Change} from "./Change";
 import {ActionKind, FrontendAction} from "./types/BaseAction";
-import {FrontendPrimitive} from "./types/Primitive";
+import {FrontendPrimitive} from "./Primitive";
 
 export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
@@ -114,7 +114,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
 		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
-		changes.filter((change: BackendChange) => !this.state.has(change))
+		changes.filter((change: BackendChange) => !this.state.seen(change))
 			.forEach((change: BackendChange) => this.insertChange(change));
 
 		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================

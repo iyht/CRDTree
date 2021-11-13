@@ -1,6 +1,6 @@
-import {ID, Index, Timestamp} from "./types/Types";
+import {ID, Index} from "./types/Types";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change} from "./types/Change";
+import {BackendChange, Change, toID} from "./Change";
 import {
 	ActionKind,
 	BackendAssignment,
@@ -14,48 +14,32 @@ import {
 } from "./types/BaseAction";
 import {
 	BackendPrimitive,
-	BasePrimitive,
-	FrontendPrimitive,
 	isBackendPrimitive,
 	ObjectKind,
-	ObjectPrimitive
-} from "./types/Primitive";
-
-type Entry = { name: ID, kind: ObjectKind, value: BasePrimitive | ID, deleted: boolean };
-type MetaObject = Map<Index, Entry> | Array<Entry>;
-type MetaMap = Map<ID, MetaObject>;
+	toObjectPrimitive
+} from "./Primitive";
+import {clockLt} from "./Clock";
+import {Entry, MetaMap, MetaObject} from "./StateObject";
+import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
 
 export default class State<T = any> {
 	private objects: MetaMap;
-	private seen: Set<ID>;
+	private _seen: Set<ID>;
 	private clock: number;
 
 	constructor(private readonly changes: BackendChange[]) {
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
-		this.seen = new Set<ID>();
+		this._seen = new Set<ID>();
 		this.changes.forEach((change) => this.witness(change));
 		this.reapplyAllChanges();
 	}
 
-	public has(change: Change): boolean {
-		return this.seen.has(State.toID(change));
+	public seen(change: Change): boolean {
+		return this._seen.has(toID(change));
 	}
 
 	private witness(change: Change): void {
-		this.seen.add(State.toID(change));
-	}
-
-	// TODO shouldn't be here
-	private static toID(change: Change): ID {
-		const {pid, clock} = change;
-		return `${pid}@${clock}` as ID;
-	}
-
-	private initObjects(): void {
-		const rootParent = new Map<Index, Entry>()
-			.set(ROOT, {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true});
-		this.objects = new Map<ID, Map<Index, Entry>>()
-			.set(ROOT_PARENT, rootParent);
+		this._seen.add(toID(change));
 	}
 
 	public next(): number {
@@ -79,7 +63,7 @@ export default class State<T = any> {
 			if (metaObject instanceof Map) {
 				entry = metaObject.get(index);
 			} else {
-				entry = metaObject[State.findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
+				entry = metaObject[findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
 			}
 			return entry?.deleted ? undefined :
 				entry?.kind === ObjectKind.OTHER ? entry?.name : (entry?.value as ID);
@@ -114,18 +98,9 @@ export default class State<T = any> {
 		} else {
 			const {pid, clock} = change;
 			const name: ID = `${pid}@${clock}`;
-			const item = State.toObjectPrimitive(name, change.action.item);
+			const item = toObjectPrimitive(name, change.action.item);
 			const action = {...change.action, item};
 			return {...change, action};
-		}
-	}
-
-	// TODO def shouldn't be in this file
-	private static toObjectPrimitive(name: ID, item: FrontendPrimitive): ObjectPrimitive {
-		if (typeof item === "object" && item !== null) {
-			return {name, value: name, kind: Array.isArray(item) ? ObjectKind.ARRAY : ObjectKind.OBJECT};
-		} else {
-			return {name, value: item as BasePrimitive, kind: ObjectKind.OTHER};
 		}
 	}
 
@@ -142,7 +117,7 @@ export default class State<T = any> {
 		}
 		this.changes.push(change);
 		this.changes.sort((a, b) => {
-			if (State.clockLt(a, b)) {
+			if (clockLt(a, b)) {
 				return -1;
 			} else {
 				return 1;
@@ -151,9 +126,10 @@ export default class State<T = any> {
 	}
 
 	private reapplyAllChanges(): void {
-		this.initObjects();
-		this.changes.forEach((change: BackendChange) =>
-			this.applyChange(change));
+		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
+		const rootParent = new Map<Index, Entry>().set(ROOT, root);
+		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
+		this.changes.forEach((change: BackendChange) => this.applyChange(change));
 	}
 
 	private applyChange(change: BackendChange): void {
@@ -202,94 +178,24 @@ export default class State<T = any> {
 		const {item, at, in: _in} = assignment;
 		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
-			State.assignToList(parent, at, item);
+			assignToList(parent, at, item);
 		} else {
 			throw new EvalError("Index assignment into an object should never happen");
 		}
 		this.createMetaObject(item);
 	}
 
-	private static assignToList(parent: Array<Entry>, at: ID, item: ObjectPrimitive): void {
-		const trueIndex = parent.findIndex((entry) => entry.name === at);
-		if (trueIndex < 0) {
-			throw new RangeError("Cannot assign to something that does not exist");
-		}
-		const oldEntry = parent[trueIndex];
-		parent[trueIndex] = {...oldEntry, value: item.value, kind: item.kind, deleted: false};
-		// State.insertInList(parent, trueIndex + 1, item);
-	}
-
-	private static insertInList(parent: Array<Entry>, index: number, item: ObjectPrimitive): void {
-		const {name, value, kind} = item;
-		parent.splice(index, 0, {name, value, kind, deleted: false});
-	}
-
-	// TODO should not be in this file
-	private static findIndexInTombstoneArray(entries: Array<Entry>, liveIndex: number): number {
-		let currentIndexOffset = liveIndex;
-		let index;
-		for (index = 0; index < entries.length; index = index + 1) {
-			const entry = entries[index];
-			if (entry.deleted === false) {
-				if (currentIndexOffset === 0) {
-					return index;
-				} else {
-					currentIndexOffset = currentIndexOffset - 1;
-				}
-			}
-		}
-		if (liveIndex < 0) {
-			return -1;
-		} else {
-			throw new RangeError("Attempting to insert off the end of the list");
-		}
-	}
-
 	private applyInsertion(insertion: BackendInsertion): void {
 		const {item, in: _in} = insertion;
 		const parent = this.getMetaObject(_in);
 		if (Array.isArray(parent)) {
-			const index = State.findInsertionIndex(parent, insertion);
-			State.insertInList(parent, index, item);
+			const index = findInsertionIndex(parent, insertion);
+			insertInList(parent, index, item);
 		} else {
 			// TODO should really ensure this happens before application time
 			throw new RangeError("Cannot insert into a non-list");
 		}
 		this.createMetaObject(item);
-	}
-
-	private static findInsertionIndex(entries: Array<Entry>, insertion: BackendInsertion): number {
-		const {after} = insertion;
-		// if inserting at the beginning of the list, start will be -1
-		const start = entries.findIndex((entry) => entry.name === after);
-		for (let index = start + 1; index < entries.length; index = index + 1) {
-			const existingEntry = entries[index];
-			if (State.nameLt(existingEntry.name, insertion.item.name)) { // existing entry happened before
-				return index;
-			}
-		}
-		return entries.length;
-	}
-
-	// TODO this code should not live here either
-	private static nameLt(a: ID, b: ID): boolean {
-		return State.clockLt(State.toTimestamp(a), State.toTimestamp(b));
-	}
-
-	// TODO this code should not live here either
-	private static toTimestamp(id: ID): Timestamp {
-		const [pid, clockString] = id.split("@");
-		const clock = Number(clockString);
-		return {pid, clock};
-	}
-
-	// TODO this code should not live here either
-	private static clockLt(a: Timestamp, b: Timestamp): boolean {
-		if (a.clock < b.clock) return true;
-		if (b.clock < a.clock) return false;
-		if (a.pid < b.pid) return true;
-		if (b.pid < a.pid) return false;
-		throw new EvalError("Two items in list with same name should be impossible");
 	}
 
 	private applyDeletion(deletion: Deletion): void {
