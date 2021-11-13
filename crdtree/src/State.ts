@@ -1,8 +1,7 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeLt, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
-	ActionKind,
 	BackendAssignment,
 	BackendInsertion,
 	BackendListAssignment,
@@ -13,7 +12,6 @@ import {
 	isDeletion
 } from "./Action";
 import {BackendPrimitive, ObjectKind} from "./Primitive";
-import {clockLt} from "./Clock";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
 
@@ -25,16 +23,17 @@ export default class State<T = any> {
 	constructor(private readonly changes: BackendChange[]) {
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
 		this._seen = new Set<ID>();
-		this.changes.forEach((change) => this.witness(change));
+		this.witness(this.changes);
 		this.reapplyAllChanges();
 	}
 
-	public seen(change: Change): boolean {
+	private seen(change: Change): boolean {
 		return this._seen.has(toID(change));
 	}
 
-	private witness(change: Change): void {
-		this._seen.add(toID(change));
+	private witness(changes: Change[]): void {
+		changes.map(toID)
+			.forEach((id: ID) => this._seen.add(id));
 	}
 
 	public next(): number {
@@ -72,46 +71,41 @@ export default class State<T = any> {
 		return maybeNumber; // definitely number
 	}
 
-	public addChange(change: Change): BackendChange {
-		change = ensureBackendChange(change);
-		this.witness(change);
-		const {clock} = change;
-		if (clock > this.clock) {
-			this.appendChange(change);
-			this.applyChange(change);
-		} else {
-			this.insertChange(change);
+	public addChange(changes: Change[]): BackendChange[] {
+		const backendChanges = changes
+			.filter((change) => !this.seen(change))
+			.map(ensureBackendChange)
+			.sort(changeSortCompare);
+		this.witness(backendChanges);
+		if (backendChanges.length > 0 && backendChanges[0].clock > this.clock) {
+			this.appendChanges(backendChanges);
+			this.applyChanges(backendChanges);
+		} else if (backendChanges.length > 0) {
+			this.insertChanges(backendChanges);
 			this.reapplyAllChanges();
 		}
-		return change;
+		return backendChanges;
 	}
 
-	private appendChange(change: BackendChange): void {
-		this.clock = change.clock;
-		this.changes.push(change);
+	private appendChanges(changes: BackendChange[]): void {
+		this.clock = changes[changes.length - 1].clock;
+		this.changes.push(...changes);
 	}
 
-	private insertChange(change: BackendChange): void {
-		if (change.action.kind === ActionKind.DELETE) {
-			// TODO if deletion, insert as early as possible
-		} else {
-			// TODO else insert as late as possible
-		}
-		this.changes.push(change);
-		this.changes.sort((a, b) => {
-			if (clockLt(a, b)) {
-				return -1;
-			} else {
-				return 1;
-			}
-		});
+	private insertChanges(changes: BackendChange[]): void {
+		this.changes.push(...changes);
+		this.changes.sort(changeSortCompare);
 	}
 
 	private reapplyAllChanges(): void {
 		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
-		this.changes.forEach((change: BackendChange) => this.applyChange(change));
+		this.applyChanges(this.changes);
+	}
+
+	private applyChanges(changes: BackendChange[]): void {
+		changes.forEach((change: BackendChange) => this.applyChange(change));
 	}
 
 	private applyChange(change: BackendChange): void {

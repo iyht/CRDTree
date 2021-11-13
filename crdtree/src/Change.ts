@@ -28,4 +28,22 @@ const ensureBackendChange = (change: Change): BackendChange => {
 	}
 };
 
-export {toID, ensureBackendChange};
+const changeLt = (a: Change, b: Change): boolean => {
+	if (a.clock < b.clock) return true;
+	if (b.clock < a.clock) return false;
+	if (a.action.kind === ActionKind.DELETE && b.action.kind !== ActionKind.DELETE) return true;
+	if (b.action.kind === ActionKind.DELETE && a.action.kind !== ActionKind.DELETE) return false;
+	if (a.pid < b.pid) return true;
+	if (b.pid < a.pid) return false;
+	throw new EvalError("Two items in list with same name should be impossible");
+};
+
+const changeSortCompare = (a: Change, b: Change): number => {
+	if (changeLt(a, b)) {
+		return -1;
+	} else {
+		return 1;
+	}
+};
+
+export {toID, ensureBackendChange, changeLt, changeSortCompare};

@@ -5,6 +5,7 @@ import "./util/utils";
 import {ICRDTree} from "../src/API";
 import {FrontendPrimitive} from "../src/Primitive";
 import {createNode} from "../src/P2P";
+import {readResource} from "./util/utils";
 
 describe("CRDTree", () => {
 
@@ -123,7 +124,18 @@ describe("CRDTree", () => {
 				expect(crdt).to.render(undefined);
 			});
 
-			it("should support insertion", () => {
+			it("should support insertion",() => {
+				crdt.assign([], []);
+				crdt.insert([0], 0);
+				crdt.insert([1], 1);
+				crdt.insert([2], 2);
+				crdt.insert([3], 3);
+				crdt.insert([4], 4);
+				crdt.insert([5], 5);
+				expect(crdt).to.render([0, 1, 2, 3, 4, 5]);
+			});
+
+			it("should support insertion (out of order)", () => {
 				crdt.assign([], []);
 				crdt.insert([0], 1);
 				crdt.insert([1], 2);
@@ -208,13 +220,12 @@ describe("CRDTree", () => {
 			let crdtB: ICRDTree;
 
 			beforeEach(() => {
-				crdtA = new CRDTree();
+				crdtA = new CRDTree([], "A");
 				crdtA.assign([], {});
-				crdtB = new CRDTree(crdtA.serialize());
+				crdtB = new CRDTree(crdtA.serialize(), "B");
 			});
 
 			it("merge with p2p pid", async () => {
-
   				const [node1, node2] = await Promise.all([
         				createNode(), 
         				createNode()
@@ -223,8 +234,6 @@ describe("CRDTree", () => {
 				crdtA.assign([], {});
 				crdtB = new CRDTree(crdtA.serialize(), node2.peerId.toB58String());
 				crdtA.merge(crdtA);
-				console.log(crdtA)
-				console.log(crdtB)
 				expect(crdtA).to.render({});
 			});
 
@@ -590,6 +599,34 @@ describe("CRDTree", () => {
 					done();
 				});
 				crdt.assign([], "foo");
+			});
+		});
+
+		describe("stress test", () => {
+			const text = readResource("text.txt");
+			const characters = text.split("");
+			const reversedCharacters = characters.slice().reverse();
+
+			const insertReversedCharsAt = (tree: CRDTree, at: number) =>
+				reversedCharacters.forEach((char) =>
+					tree.insert([at], char));
+
+			const insertInOrderCharsAt = (tree: CRDTree, at: number) =>
+				characters.forEach((char, index) =>
+					tree.insert([index + at], char));
+
+			it(`should perform reasonably with many insertions ((2 * ${characters.length}) + 1)`, function () {
+				this.timeout(1000);
+				const crdtA = new CRDTree([], "A");
+				crdtA.assign([], []);
+				crdtA.insert([0], "@");
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+
+				insertReversedCharsAt(crdtA, 0);
+				insertInOrderCharsAt(crdtB, 1);
+
+				expect(crdtA).to.merge(crdtB);
+				expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
 			});
 		});
 	});
