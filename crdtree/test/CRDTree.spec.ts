@@ -2,8 +2,8 @@ import {expect} from "chai";
 import {Done} from "mocha";
 import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
-import {ICRDTree} from "../src/types/Types";
-import {FrontendPrimitive} from "../src/types/Primitive";
+import {ICRDTree} from "../src/API";
+import {FrontendPrimitive} from "../src/Primitive";
 
 describe("CRDTree", () => {
 
