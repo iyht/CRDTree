@@ -47,12 +47,17 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {
 		const last = indices[indices.length - 1] ?? (ROOT as Index);
-		this.makeChange({
-			at: last,
-			in: this.getParentElement(indices),
-			item,
-			kind: ActionKind.ASSIGN
-		});
+		if (typeof last === "string") {
+			this.makeChange({
+				at: last,
+				in: this.getParentElement(indices),
+				item,
+				kind: ActionKind.ASSIGN
+			});
+		} else {
+			this.insert([...indices.slice(0, -1), last + 1], item);
+			this.delete(indices);
+		}
 	}
 
 	public insert<U extends FrontendPrimitive = any>(indices: [...Index[], number], item: U): void {
