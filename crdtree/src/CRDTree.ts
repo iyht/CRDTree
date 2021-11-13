@@ -5,15 +5,16 @@ import {BackendChange, Change} from "./Change";
 import {ActionKind, FrontendAction} from "./Action";
 import {FrontendPrimitive} from "./Primitive";
 import {assertSerializable} from "./Util";
+import {uuid} from "./UUID";
 
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
 	private readonly state: State<T>;
 	private readonly pid: string;
 
-	constructor(from: CRDTreeTransport<T> = []) {
+	constructor(from: CRDTreeTransport<T> = [], pid?: string) {
 		this.callbacks = [];
-		this.pid = String(Date.now()) + String(Math.random() * 1000); // TODO lol
+		this.pid = pid ?? uuid();
 		this.state = new State<T>(from);
 	}
 
