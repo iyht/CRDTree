@@ -1,7 +1,10 @@
 import {expect} from "chai";
 import {Done} from "mocha";
-import {CRDTree, ICRDTree} from "../src/CRDTree";
+import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
+import {ICRDTree} from "../src/API";
+import {FrontendPrimitive} from "../src/Primitive";
+import {readResource} from "./util/utils";
 
 describe("CRDTree", () => {
 
@@ -30,7 +33,11 @@ describe("CRDTree", () => {
 			it("should only allow JSON serializable data", () => {
 				[undefined, (x) => x(x), NaN].forEach((data: unknown) => {
 					expect(() => {
-						crdt.assign([], data);
+						crdt.assign([], data as FrontendPrimitive);
+					}).to.throw(Error);
+					expect(() => {
+						crdt.assign([], []);
+						crdt.insert([0], data as FrontendPrimitive);
 					}).to.throw(Error);
 				});
 			});
@@ -58,7 +65,32 @@ describe("CRDTree", () => {
 				expect(crdt).to.render(10);
 			});
 
-			it("should be able to assign to sub-objects", () => {
+			it("should be able to assign to sub-objects (just objects)", () => {
+				crdt.assign([], {});
+				crdt.assign(["foo"], {});
+				crdt.assign(["foo", "bar"], {});
+				crdt.assign(["foo", "bar", "baz"], "change");
+				expect(crdt).to.render({foo: {bar: {baz: "change"}}});
+			});
+
+			it("should be able to delete a sub-object", () => {
+				crdt.assign([], {});
+				crdt.assign(["foo"], {});
+				crdt.assign(["foo", "bar"], {});
+				crdt.assign(["foo", "bar", "baz"], "change");
+				crdt.delete(["foo", "bar"]);
+				expect(crdt).to.render({foo: {}});
+			});
+
+			it("should be able to assign to sub-objects (just arrays)", () => {
+				crdt.assign([], []);
+				crdt.insert([0], []);
+				crdt.insert([0, 0], []);
+				crdt.insert([0, 0, 0], "foo");
+				expect(crdt).to.render([[["foo"]]]);
+			});
+
+			it("should be able to assign to sub-objects (mixed)", () => {
 				crdt.assign([], {});
 				crdt.assign(["foo"], []);
 				crdt.insert(["foo", 0], 10);
@@ -80,7 +112,7 @@ describe("CRDTree", () => {
 
 			it("should support deletion", () => {
 				crdt.assign([], {});
-				crdt.assign(["foo"], {});
+				crdt.assign(["foo"], []);
 				crdt.insert(["foo", 0], 10);
 				expect(crdt).to.render({foo: [10]});
 				crdt.delete(["foo", 0]);
@@ -91,7 +123,18 @@ describe("CRDTree", () => {
 				expect(crdt).to.render(undefined);
 			});
 
-			it("should support insertion", () => {
+			it("should support insertion",() => {
+				crdt.assign([], []);
+				crdt.insert([0], 0);
+				crdt.insert([1], 1);
+				crdt.insert([2], 2);
+				crdt.insert([3], 3);
+				crdt.insert([4], 4);
+				crdt.insert([5], 5);
+				expect(crdt).to.render([0, 1, 2, 3, 4, 5]);
+			});
+
+			it("should support insertion (out of order)", () => {
 				crdt.assign([], []);
 				crdt.insert([0], 1);
 				crdt.insert([1], 2);
@@ -133,6 +176,7 @@ describe("CRDTree", () => {
 
 				expect(() => crdt.assign(["list", "0"], 10)).to.throw(Error);
 				expect(() => crdt.insert([0], 10)).to.throw(Error);
+				expect(() => crdt.assign([0], 10)).to.throw(Error);
 			});
 
 			it("should enforce a deletion", () => {
@@ -145,9 +189,19 @@ describe("CRDTree", () => {
 				expect(() => crdt.assign(["list", 0], "new element")).to.throw(Error);
 			});
 
+			it("should be able to mutate objects within a list", () => {
+				crdt.assign([], []);
+				crdt.insert([0], 0);
+				crdt.assign([0], {});
+				expect(crdt).to.render([{}]);
+				crdt.assign([0, "foo"], "ayy");
+				expect(crdt).to.render([{foo: "ayy"}]);
+			});
+
 			xit("should not allow complex object assignment", () => {
-				expect(() => crdt.assign([], {foo: 69})).to.throw(Error);
-				expect(() => crdt.assign([], [420])).to.throw(Error);
+				// type system to the rescue?
+				// expect(() => crdt.assign([], {foo: 69})).to.throw(Error);
+				// expect(() => crdt.assign([], [420])).to.throw(Error);
 			});
 
 			describe("cloning", () => {
@@ -165,9 +219,9 @@ describe("CRDTree", () => {
 			let crdtB: ICRDTree;
 
 			beforeEach(() => {
-				crdtA = new CRDTree();
+				crdtA = new CRDTree([], "A");
 				crdtA.assign([], {});
-				crdtB = new CRDTree(crdtA.serialize());
+				crdtB = new CRDTree(crdtA.serialize(), "B");
 			});
 
 			it("should be able to merge into self as a no-op", () => {
@@ -232,13 +286,28 @@ describe("CRDTree", () => {
 			it("should resolve moving indices in a list", () => {
 				crdtA.assign([], []);
 				crdtA.insert([0], "target");
-				expect(crdtA).to.merge(crdtB).as(["target"]);
+				crdtA.insert([1], "after after");
+				expect(crdtA).to.merge(crdtB).as(["target", "after after"]);
 
 				crdtA.insert([0], "before");
 				crdtA.insert([2], "after");
 				crdtA.insert([0], "before before");
 				crdtB.assign([0], "hit!");
-				crdtA.insert([1], "after before, but still before");
+				crdtA.insert([2], "after before, but still before");
+
+				expect(crdtA).to.render([
+					"before before",
+					"before",
+					"after before, but still before",
+					"target",
+					"after",
+					"after after",
+				]);
+
+				expect(crdtB).to.render([
+					"hit!",
+					"after after",
+				]);
 
 				expect(crdtA).to.merge(crdtB).as([
 					"before before",
@@ -246,6 +315,7 @@ describe("CRDTree", () => {
 					"after before, but still before",
 					"hit!",
 					"after",
+					"after after",
 				]);
 			});
 
@@ -326,7 +396,7 @@ describe("CRDTree", () => {
 					crdtA.assign(["foo", 0, "bar"], 0);
 					expect(crdtA).to.merge(crdtB).as({foo: [{bar: 0}]});
 
-					crdtA.delete(["foo", 0]);
+					crdtA.delete(["foo"]);
 					crdtB.assign(["foo", 0, "bar"], 20);
 
 					expect(crdtA).to.render({});
@@ -340,7 +410,7 @@ describe("CRDTree", () => {
 			it("should handle an update for a list it hasn't gotten an assignment for yet");
 
 			describe("conflicting assignment", () => {
-				it("should be fine if two processes assign the same value to the same variable" , () => {
+				it("should be fine if two processes assign the same value to the same variable", () => {
 					crdtA.assign(["foo"], "bar");
 					crdtB.assign(["foo"], "bar");
 					expect(crdtA).to.merge(crdtB).as({foo: "bar"});
@@ -375,7 +445,7 @@ describe("CRDTree", () => {
 
 					crdtA.assign(["list", 0], []);
 					crdtB.assign(["list", 0], {});
-					expect(crdtA).to.merge(crdtB).asOneOf({list: [[]]}, {foo: [{}]});
+					expect(crdtA).to.merge(crdtB).asOneOf({list: [[]]}, {list: [{}]});
 				});
 
 				it("should pick a winner from concurrent, consecutive changes including assignment", () => {
@@ -404,7 +474,7 @@ describe("CRDTree", () => {
 					expect(crdtA).to.merge(crdtB).asOneOf([1, 2, 3], [1, "two", 3]);
 				});
 
-				it("should resolve redundant concurrent changes", () => {
+				xit("should resolve redundant concurrent changes", () => {
 					crdtA.assign([], {});
 					crdtB.assign([], {});
 					crdtA.assign(["foo"], 10);
@@ -426,7 +496,7 @@ describe("CRDTree", () => {
 					expect(crdtA).to.merge(crdtB).asOneOf({key: "B"}, {key: "C"});
 				});
 
-				it("should resolve concurrent mutation and reassignment (fig.2)", () => {
+				xit("should resolve concurrent mutation and reassignment (fig.2)", () => {
 					crdtA.assign(["colors"], {});
 					crdtA.assign(["colors", "blue"], "#0000ff");
 					expect(crdtA).to.merge(crdtB).as({colors: {blue: "#0000ff"}});
@@ -441,7 +511,7 @@ describe("CRDTree", () => {
 					expect(crdtA).to.merge(crdtB).as({colors: {red: "#ff0000", green: "#00ff00"}});
 				});
 
-				it("should handle replicas creating lists with same key (fig.3)", () => {
+				xit("should handle replicas creating lists with same key (fig.3)", () => {
 					crdtA.assign(["grocery"], []);
 					crdtA.insert(["grocery", 0], "eggs");
 					crdtA.insert(["grocery", 1], "ham");
@@ -503,8 +573,7 @@ describe("CRDTree", () => {
 					expect(crdtA).to.render({todo: []});
 					expect(crdtB).to.render({todo: [{title: "buy milk", done: true}]});
 
-					// expect(crdtA).to.merge(crdtB).as({todo: [{done: true}]}); // paper behaviour
-					expect(crdtA).to.merge(crdtB).as({todo: []}); // automerge behaviour
+					expect(crdtA).to.merge(crdtB).as({todo: []});
 				});
 			});
 		});
@@ -513,10 +582,38 @@ describe("CRDTree", () => {
 			it("should eventually call onUpdate", (done: Done) => {
 				const crdt: ICRDTree = new CRDTree();
 				crdt.onUpdate((update) => {
-					expect(update).to.exist; // TODO need more information than this
+					expect(update).to.exist;
 					done();
 				});
 				crdt.assign([], "foo");
+			});
+		});
+
+		describe("stress test", () => {
+			const text = readResource("text.txt");
+			const characters = text.split("");
+			const reversedCharacters = characters.slice().reverse();
+
+			const insertReversedCharsAt = (tree: CRDTree, at: number) =>
+				reversedCharacters.forEach((char) =>
+					tree.insert([at], char));
+
+			const insertInOrderCharsAt = (tree: CRDTree, at: number) =>
+				characters.forEach((char, index) =>
+					tree.insert([index + at], char));
+
+			it(`should perform reasonably with many insertions ((2 * ${characters.length}) + 1)`, function () {
+				this.timeout(1000);
+				const crdtA = new CRDTree([], "A");
+				crdtA.assign([], []);
+				crdtA.insert([0], "@");
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+
+				insertReversedCharsAt(crdtA, 0);
+				insertInOrderCharsAt(crdtB, 1);
+
+				expect(crdtA).to.merge(crdtB);
+				expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
 			});
 		});
 	});

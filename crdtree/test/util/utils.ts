@@ -1,5 +1,6 @@
-import {ICRDTree, ID} from "../../src/CRDTree";
 import * as chai from "chai";
+import {ICRDTree, ID} from "../../src/API";
+import * as fs from "fs";
 
 chai.Assertion.addMethod('render', function (expectedRender) {
 	const crdt: ICRDTree = this._obj;
@@ -44,3 +45,9 @@ declare global {
 		}
 	}
 }
+
+const readResource = (filename: string): string =>
+	fs.readFileSync(`${__dirname}/../resources/${filename}`)
+		.toString();
+
+export {readResource};
