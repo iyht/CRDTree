@@ -5,6 +5,7 @@ import {isBackendPrimitive, toObjectPrimitive} from "./Primitive";
 type ChangeBase = {
 	pid: string;
 	clock: number;
+	dep: ID | undefined;
 };
 export type FrontendChange = ChangeBase & { action: FrontendAction };
 export type BackendChange = ChangeBase & { action: BackendAction };

@@ -483,6 +483,24 @@ describe("CRDTree", () => {
 				});
 			});
 
+			describe("Message loss/Out of order delivery", () => {
+
+				it("should render once everything is delivered even if out of order", async () => {
+					const updates = [];
+					crdtA.onUpdate((update) => updates.push(...update));
+					crdtA.assign(["foo"], {});
+					crdtA.assign(["foo", "foo"], "bar");
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(crdtA).to.render({foo: {foo: "bar"}});
+					expect(crdtB).to.render({});
+					expect(updates).to.have.length(2);
+					crdtB.merge([updates.pop()]);
+					crdtB.merge([updates.pop()]);
+					expect(crdtB).to.render({foo: {foo: "bar"}});
+				});
+			});
+
 			describe("CRD JSON T paper examples", () => {
 				it("should handle concurrent assignment (fig.1)", () => {
 					crdtA.assign(["key"], "A");
