@@ -1,6 +1,6 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, changeLt, changeSortCompare, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
 	BackendInsertion,
@@ -27,8 +27,9 @@ export default class State<T = any> {
 		this.reapplyAllChanges();
 	}
 
-	private seen(change: Change): boolean {
-		return this._seen.has(toID(change));
+	private seen(change: Change | ID): boolean {
+		const id: ID = typeof change === "string" ? change : toID(change);
+		return this._seen.has(id);
 	}
 
 	private witness(changes: Change[]): void {
@@ -38,6 +39,14 @@ export default class State<T = any> {
 
 	public next(): number {
 		return this.clock + 1;
+	}
+
+	public latest(): ID | undefined {
+		if (this.changes.length > 0) {
+			return toID(this.changes[this.changes.length - 1]);
+		} else {
+			return undefined;
+		}
 	}
 
 	public getElement(indices: Index[]): ID {
@@ -105,7 +114,9 @@ export default class State<T = any> {
 	}
 
 	private applyChanges(changes: BackendChange[]): void {
-		changes.forEach((change: BackendChange) => this.applyChange(change));
+		changes
+			.filter((change: BackendChange) => !change.dep || this.seen(change.dep))
+			.forEach((change: BackendChange) => this.applyChange(change));
 	}
 
 	private applyChange(change: BackendChange): void {
