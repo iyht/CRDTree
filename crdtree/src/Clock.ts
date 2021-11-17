@@ -3,7 +3,15 @@ import {ID} from "./API";
 type Timestamp = {clock: number, pid: string};
 
 const nameLt = (a: ID, b: ID): boolean => {
+	return timestampLt(toTimestamp(a), toTimestamp(b));
+};
+
+const nameClockLt = (a: ID, b: ID): boolean => {
 	return clockLt(toTimestamp(a), toTimestamp(b));
+};
+
+const clockLt = (a: Timestamp, b: Timestamp): boolean => {
+	return (a.clock < b.clock);
 };
 
 const toTimestamp = (id: ID): Timestamp => {
@@ -12,7 +20,7 @@ const toTimestamp = (id: ID): Timestamp => {
 	return {pid, clock};
 };
 
-const clockLt = (a: Timestamp, b: Timestamp): boolean => {
+const timestampLt = (a: Timestamp, b: Timestamp): boolean => {
 	if (a.clock < b.clock) return true;
 	if (b.clock < a.clock) return false;
 	if (a.pid < b.pid) return true;
@@ -20,4 +28,4 @@ const clockLt = (a: Timestamp, b: Timestamp): boolean => {
 	throw new EvalError("Two items in list with same name should be impossible");
 };
 
-export {nameLt, toTimestamp, clockLt};
+export {nameLt, toTimestamp, timestampLt, nameClockLt};

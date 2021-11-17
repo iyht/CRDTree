@@ -14,7 +14,7 @@ import {
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
-import {nameLt} from "./Clock";
+import {nameClockLt, nameLt} from "./Clock";
 
 export default class State<T = any> {
 	private objects: MetaMap;
@@ -50,11 +50,11 @@ export default class State<T = any> {
 		}
 	}
 
-	public getElement(indices: Index[]): ID {
+	public getElementID(indices: Index[]): ID {
 		return this.getElementImpl([ROOT, ...indices]);
 	}
 
-	public getParentElement(indices: Index[]): ID {
+	public getEnclosingObjectID(indices: Index[]): ID {
 		const element = this.getElementImpl([ROOT, ...indices].slice(0, -1));
 		this.getMetaObject(element); // for side effect of asserting that this is indexable
 		return element;
@@ -111,7 +111,7 @@ export default class State<T = any> {
 
 	private reapplyAllChanges(): void {
 		const name: ID = "@-1";
-		const root = {name, kind: ObjectKind.OTHER, value: undefined, deleted: true};
+		const root = {creator: name, editor: name, kind: ObjectKind.OTHER, value: undefined, deleted: undefined};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
 		this.applyChanges(this.changes);
@@ -132,7 +132,7 @@ export default class State<T = any> {
 		} else if (isBackendInsertion(action)) {
 			this.applyInsertion(action);
 		} else if (isDeletion(action)) {
-			this.applyDeletion(action);
+			this.applyDeletion(action, toID(change));
 		}
 	}
 
@@ -160,8 +160,24 @@ export default class State<T = any> {
 		if (Array.isArray(parent)) {
 			throw new EvalError("Key assignment into a list should never happen");
 		} else {
-			if (!parent.has(at) || nameLt(parent.get(at).creator, name)) {
-				parent.set(at, {creator: name, value, kind, deleted: false});
+			if (!parent.has(at)) {
+				parent.set(at, {creator: name, editor: name, value, kind, deleted: undefined});
+			} else {
+				const existing = parent.get(at);
+				const {creator, editor} = existing;
+				let deleted;
+				if (!existing.deleted) {
+					deleted = undefined;
+				} else {
+					if (nameClockLt(existing.deleted, name)) { // was deleted before the assignment
+						deleted = undefined;
+					} else {
+						deleted = existing.deleted;
+					}
+				}
+				if (nameLt(editor, name)) { // if existing happened before
+					parent.set(at, {creator, editor: name, value, kind, deleted});
+				}
 			}
 		}
 		this.createMetaObject(item);
@@ -191,17 +207,26 @@ export default class State<T = any> {
 		this.createMetaObject(item);
 	}
 
-	private applyDeletion(deletion: Deletion): void {
+	private applyDeletion(deletion: Deletion, when: ID): void {
 		const {at, in: _in} = deletion;
 		const parent = this.getMetaObject(_in);
+		const predicate = (entry: Entry) =>
+			nameClockLt(entry.creator, when) &&
+			(entry.creator === at || (entry.kind !== ObjectKind.OTHER && entry.value === at))
 		if (Array.isArray(parent)) {
 			parent
 				.forEach((entry, index) =>
-					(entry.creator === at) && (parent[index] = {...entry, deleted: true}));
+					predicate(entry) && (parent[index] = {
+						...entry,
+						deleted: when
+					}));
 		} else {
 			Array.from(parent.entries())
-				.forEach(([name, entry]) =>
-					(entry.creator === at) && parent.set(name, {...entry, deleted: true}));
+				.forEach(([index, entry]) =>
+					predicate(entry) && parent.set(index, {
+						...entry,
+						deleted: when
+					}));
 		}
 	}
 
@@ -220,7 +245,7 @@ export default class State<T = any> {
 
 	private renderRecursiveMap(metaObject: Map<Index, Entry>): any {
 		return Array.from(metaObject.entries()).reduce((element: any, [index, entry]): any => {
-			if (entry.deleted === false) {
+			if (!entry.deleted) {
 				element[index] = this.renderRecursive(entry);
 			}
 			return element;
@@ -228,7 +253,7 @@ export default class State<T = any> {
 	}
 
 	private renderRecursiveList(metaObject: Array<Entry>): any {
-		return metaObject.filter((entry) => entry.deleted === false)
+		return metaObject.filter((entry) => !entry.deleted)
 			.map((entry) => this.renderRecursive(entry));
 	}
 

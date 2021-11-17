@@ -34,11 +34,11 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private getElement(indices: Index[]): ID {
-		return this.state.getElement(indices);
+		return this.state.getElementID(indices);
 	}
 
 	private getParentElement(indices: Index[]): ID {
-		return this.state.getParentElement(indices);
+		return this.state.getEnclosingObjectID(indices);
 	}
 
 	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {

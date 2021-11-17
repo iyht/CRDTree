@@ -10,13 +10,16 @@ const assignToList = (parent: Array<Entry>, at: ID, item: ObjectPrimitive): void
 		// TODO this should get checked before application
 		throw new RangeError("Cannot assign to something that does not exist");
 	}
-	const oldEntry = parent[trueIndex];
-	parent[trueIndex] = {...oldEntry, value: item.value, kind: item.kind, deleted: false};
+	const existing = parent[trueIndex];
+	const {creator, editor} = existing;
+	if (nameLt(editor, item.name)) { // if existing happened before
+		parent[trueIndex] = {creator, editor: item.name, value: item.value, kind: item.kind, deleted: undefined}; // TODO
+	}
 };
 
 const insertInList = (parent: Array<Entry>, index: number, item: ObjectPrimitive): void => {
 	const {name, value, kind} = item;
-	parent.splice(index, 0, {creator: name, value, kind, deleted: false});
+	parent.splice(index, 0, {creator: name, editor: name, value, kind, deleted: undefined});
 };
 
 const findIndexInTombstoneArray = (entries: Array<Entry>, liveIndex: number): number => {
@@ -24,7 +27,7 @@ const findIndexInTombstoneArray = (entries: Array<Entry>, liveIndex: number): nu
 	let index;
 	for (index = 0; index < entries.length; index = index + 1) {
 		const entry = entries[index];
-		if (entry.deleted === false) {
+		if (!entry.deleted) {
 			if (currentIndexOffset === 0) {
 				return index;
 			} else {
