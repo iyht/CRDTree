@@ -14,6 +14,7 @@ import {
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
+import {nameLt} from "./Clock";
 
 export default class State<T = any> {
 	private objects: MetaMap;
@@ -69,7 +70,7 @@ export default class State<T = any> {
 				entry = metaObject[findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
 			}
 			return entry?.deleted ? undefined :
-				entry?.kind === ObjectKind.OTHER ? entry?.name : (entry?.value as ID);
+				entry?.kind === ObjectKind.OTHER ? entry?.creator : (entry?.value as ID);
 		}, ROOT_PARENT) as ID;
 	}
 
@@ -91,7 +92,9 @@ export default class State<T = any> {
 			this.applyChanges(backendChanges);
 		} else if (backendChanges.length > 0) {
 			this.insertChanges(backendChanges);
-			this.reapplyAllChanges();
+			const store = this.clock; // TODO temporary fix -- don't allow this to get merged
+			this.applyChanges(backendChanges);
+			this.clock = store;
 		}
 		return backendChanges;
 	}
@@ -107,7 +110,8 @@ export default class State<T = any> {
 	}
 
 	private reapplyAllChanges(): void {
-		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
+		const name: ID = "@-1";
+		const root = {name, kind: ObjectKind.OTHER, value: undefined, deleted: true};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
 		this.applyChanges(this.changes);
@@ -156,7 +160,9 @@ export default class State<T = any> {
 		if (Array.isArray(parent)) {
 			throw new EvalError("Key assignment into a list should never happen");
 		} else {
-			parent.set(at, {name, value, kind, deleted: false});
+			if (!parent.has(at) || nameLt(parent.get(at).creator, name)) {
+				parent.set(at, {creator: name, value, kind, deleted: false});
+			}
 		}
 		this.createMetaObject(item);
 	}
@@ -191,11 +197,11 @@ export default class State<T = any> {
 		if (Array.isArray(parent)) {
 			parent
 				.forEach((entry, index) =>
-					(entry.name === at) && (parent[index] = {...entry, deleted: true}));
+					(entry.creator === at) && (parent[index] = {...entry, deleted: true}));
 		} else {
 			Array.from(parent.entries())
 				.forEach(([name, entry]) =>
-					(entry.name === at) && parent.set(name, {...entry, deleted: true}));
+					(entry.creator === at) && parent.set(name, {...entry, deleted: true}));
 		}
 	}
 
