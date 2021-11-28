@@ -23,6 +23,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 			action: action,
 			clock: this.state.next(),
 			pid: this.pid,
+			branch: this.state.ref(),
 			dep: this.state.latest(),
 		}]);
 		this.callbacks.forEach((callback) =>
@@ -30,7 +31,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private insertChanges(changes: Change[]): BackendChange[] {
-		return this.state.addChange(changes);
+		return this.state.addChanges(changes);
 	}
 
 	private getElement(indices: Index[]): ID {
@@ -119,7 +120,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public ref(): ID {
-		return undefined;
+		return this.state.ref();
 	}
 
 	public checkout(ref: ID): void {

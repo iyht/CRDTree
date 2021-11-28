@@ -1,5 +1,5 @@
 import {ID, Index} from "./API";
-import {ROOT, ROOT_PARENT} from "./Constants";
+import {HEAD, ROOT, ROOT_PARENT} from "./Constants";
 import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
@@ -20,13 +20,46 @@ import {ensureNumber} from "./Util";
 export default class State<T = any> {
 	private objects: MetaMap;
 	private _seen: Set<ID>;
+	private _ref: ID;
 	private clock: number;
+	private readonly branches: Map<ID, BackendChange[]>;
 
-	constructor(private readonly changes: BackendChange[]) {
-		this.clock = changes[changes.length - 1]?.clock ?? 0;
+	constructor(changes: BackendChange[]) {
+		this._ref = ROOT;
+		this.branches = new Map();
 		this._seen = new Set<ID>();
-		this.witness(this.changes);
-		this.reapplyAllChanges();
+		this.clock = 0;
+		this.reinitObjects();
+		this.addChanges(changes);
+	}
+
+	public addChanges(changes: Change[]): BackendChange[] {
+		const backendChanges = changes
+			.filter((change) => !this.seen(change))
+			.map(ensureBackendChange);
+		backendChanges.forEach((change) => {
+			const {branch} = change;
+			if (!this.branches.has(branch)) {
+				this.branches.set(branch, []);
+			}
+			this.branches.get(branch).push(change);
+		});
+		const branch = this.collect();
+		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
+		this.witness(newToCurrentBranch);
+		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
+			this.appendChanges(newToCurrentBranch);
+			this.applyChanges(newToCurrentBranch);
+		} else if (newToCurrentBranch.length > 0) {
+			this.reapply(branch);
+		}
+		return newToCurrentBranch;
+	}
+
+	private collect(): BackendChange[] {
+		// TODO more complicated that this...
+		// TODO don't forget to do the sort `.sort(changeSortCompare);`
+		return (this.branches.get(this.ref()) ?? []).sort(changeSortCompare);
 	}
 
 	private seen(change: Change | ID): boolean {
@@ -44,8 +77,9 @@ export default class State<T = any> {
 	}
 
 	public latest(): ID | undefined {
-		if (this.changes.length > 0) {
-			return toID(this.changes[this.changes.length - 1]);
+		const branch = this.collect();
+		if (branch.length > 0) {
+			return toID(branch[branch.length - 1]);
 		} else {
 			return undefined;
 		}
@@ -75,37 +109,19 @@ export default class State<T = any> {
 		}, ROOT_PARENT) as ID;
 	}
 
-	public addChange(changes: Change[]): BackendChange[] {
-		const backendChanges = changes
-			.filter((change) => !this.seen(change))
-			.map(ensureBackendChange)
-			.sort(changeSortCompare);
-		this.witness(backendChanges);
-		if (backendChanges.length > 0 && backendChanges[0].clock > this.clock) {
-			this.appendChanges(backendChanges);
-			this.applyChanges(backendChanges);
-		} else if (backendChanges.length > 0) {
-			this.insertChanges(backendChanges);
-			this.reapplyAllChanges();
-		}
-		return backendChanges;
-	}
-
 	private appendChanges(changes: BackendChange[]): void {
 		this.clock = changes[changes.length - 1].clock;
-		this.changes.push(...changes);
 	}
 
-	private insertChanges(changes: BackendChange[]): void {
-		this.changes.push(...changes);
-		this.changes.sort(changeSortCompare);
+	private reapply(changes: BackendChange[]): void {
+		this.reinitObjects();
+		this.applyChanges(changes);
 	}
 
-	private reapplyAllChanges(): void {
+	private reinitObjects(): void {
 		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
-		this.applyChanges(this.changes);
 	}
 
 	private applyChanges(changes: BackendChange[]): void {
@@ -195,10 +211,18 @@ export default class State<T = any> {
 	}
 
 	public listChanges(): BackendChange[] {
-		return this.changes.slice();
+		const changes = [];
+		for (const branch of this.branches.values()) {
+			changes.push(...branch);
+		}
+		return changes;
 	}
 
 	public render(): T {
 		return render(this.objects);
+	}
+
+	public ref(): ID {
+		return this._ref; // TODO
 	}
 }

@@ -6,6 +6,7 @@ type ChangeBase = {
 	pid: string;
 	clock: number;
 	dep: ID | undefined;
+	branch: ID;
 };
 export type FrontendChange = ChangeBase & { action: FrontendAction };
 export type BackendChange = ChangeBase & { action: BackendAction };
