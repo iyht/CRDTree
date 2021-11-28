@@ -260,4 +260,16 @@ export default class State<T = any> {
 			return value;
 		}
 	}
+
+	public makeBranch(): BranchID {
+		let newBranchID = uuid();
+		let newPreds = new Map<BranchID, Change>();
+		if (this.latestChange() != undefined) {
+			newPreds.set(this.branch, this.latestChange());
+		}
+		this.branchMap.set(newBranchID, newPreds);
+		this.branch = newBranchID;
+		return newBranchID;
+	}
+
 }

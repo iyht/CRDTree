@@ -108,7 +108,14 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public fork(): BranchID {
-		return undefined;
+		let curBranch = this.state.getBranchID();
+		let newBranch = this.state.makeBranch();
+		this.makeChange({
+			kind: ActionKind.FORK,
+			parent: this.state.latest(),
+			parentBranch: curBranch,
+		});
+		return newBranch;
 	}
 
 	public join(ref: BranchID): void {
@@ -120,7 +127,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public ref(): BranchID {
-		return undefined;
+		return this.state.getBranchID();
 	}
 
 	public checkout(ref: BranchID): void {
