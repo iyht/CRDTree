@@ -1,5 +1,5 @@
 import {ID, Index, BranchID} from "./API";
-import {ROOT, ROOT_PARENT} from "./Constants";
+import {ROOT, ROOT_PARENT, MAIN} from "./Constants";
 import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
@@ -14,16 +14,22 @@ import {
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
+import {BranchMap, checkCausallyRelevant} from "./Branch";
+import {uuid} from "./UUID";
 
 export default class State<T = any> {
 	private objects: MetaMap;
 	private _seen: Set<ID>;
 	private clock: number;
 	private branch: BranchID;  // make into branch ID type later?
+	private branchMap: BranchMap;
 
 	constructor(private readonly changes: BackendChange[]) {
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
 		this._seen = new Set<ID>();
+		this.branch = MAIN;
+		this.branchMap = new Map<BranchID, Map<BranchID, Change>>();
+		this.branchMap[MAIN]= new Map<BranchID, Change>();
 		this.witness(this.changes);
 		this.reapplyAllChanges();
 	}
@@ -43,13 +49,30 @@ export default class State<T = any> {
 	}
 
 	public latest(): ID | undefined {
-		if (this.changes.length > 0) {
-			return toID(this.changes[this.changes.length - 1]);
+		const backendChanges = this.changes
+			.filter((change) => checkCausallyRelevant(change, this.branch, this.branchMap));
+		if (backendChanges.length > 0) {
+			return toID(backendChanges[backendChanges.length - 1]);
 		} else {
 			return undefined;
 		}
 	}
 
+	public latestChange(): BackendChange | undefined {
+		const backendChanges = this.changes
+			.filter((change) => checkCausallyRelevant(change, this.branch, this.branchMap));
+		if (backendChanges.length > 0) {
+			return backendChanges[backendChanges.length - 1];
+		} else {
+			return undefined;
+		}
+	}
+
+	public getBranchID(): BranchID {
+		return this.branch;
+	}
+
+	// TODO verify we don't have to affect this, given we maintain invariant this.objects is tracking branch only
 	public getElement(indices: Index[]): ID {
 		return this.getElementImpl([ROOT, ...indices]);
 	}
@@ -116,7 +139,7 @@ export default class State<T = any> {
 
 	private applyChanges(changes: BackendChange[]): void {
 		changes
-			.filter((change: BackendChange) => !change.dep || this.seen(change.dep))
+			.filter((change: BackendChange) => checkCausallyRelevant(change, this.branch, this.branchMap) && (!change.dep || this.seen(change.dep)))
 			.forEach((change: BackendChange) => this.applyChange(change));
 	}
 

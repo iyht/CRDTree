@@ -24,6 +24,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 			clock: this.state.next(),
 			pid: this.pid,
 			dep: this.state.latest(),
+			branch: this.state.getBranchID(),
 		}]);
 		this.callbacks.forEach((callback) =>
 			setImmediate(callback, backendChanges));
