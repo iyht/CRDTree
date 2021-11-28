@@ -17,6 +17,8 @@ const clockLt = (a: Timestamp, b: Timestamp): boolean => {
 	if (b.clock < a.clock) return false;
 	if (a.pid < b.pid) return true;
 	if (b.pid < a.pid) return false;
+	// TODO if (a.branch < b.branch) return true; // TODO
+	// TODO if (b.branch < a.branch) return false; // TODO
 	throw new EvalError("Two items in list with same name should be impossible");
 };
 

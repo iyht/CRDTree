@@ -99,31 +99,43 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.callbacks.push(callback);
 	}
 
-	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
+	public fork(): string {
+		const oldBranch = this.state.ref();
+		const newBranch = uuid();
+		this.state.checkout(newBranch); // VERY EXPENSIVE/WASTEFUL reapplication here lol
+		this.makeChange({
+			kind: ActionKind.FORK,
+			from: oldBranch,
+			after: this.state.latest(oldBranch),
+		});
+		return newBranch;
+	}
+
+	public join(ref: string): void {
+		this.makeChange({
+			kind: ActionKind.JOIN,
+			from: ref,
+			after: this.state.latest(ref),
+		});
+	}
+
+	public ref(): string {
+		return this.state.ref();
+	}
+
+	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): string[] {
 		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
 		this.insertChanges(changes);
 
 		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================
-		return [];
+		return []; // TODO
 	}
 
-	public fork(): ID {
-		return undefined;
+	public listRefs(): string[] {
+		return []; // TODO
 	}
 
-	public join(ref: ID): void {
-		return;
-	}
-
-	public listRefs(): ID[] {
-		return [];
-	}
-
-	public ref(): ID {
-		return this.state.ref();
-	}
-
-	public checkout(ref: ID): void {
-		return;
+	public checkout(ref: string): void {
+		return; // TODO
 	}
 }

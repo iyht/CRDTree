@@ -20,9 +20,9 @@ import {ensureNumber} from "./Util";
 export default class State<T = any> {
 	private objects: MetaMap;
 	private _seen: Set<ID>;
-	private _ref: ID;
+	private _ref: string;
 	private clock: number;
-	private readonly branches: Map<ID, BackendChange[]>;
+	private readonly branches: Map<string, BackendChange[]>;
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
@@ -34,16 +34,8 @@ export default class State<T = any> {
 	}
 
 	public addChanges(changes: Change[]): BackendChange[] {
-		const backendChanges = changes
-			.filter((change) => !this.seen(change))
-			.map(ensureBackendChange);
-		backendChanges.forEach((change) => {
-			const {branch} = change;
-			if (!this.branches.has(branch)) {
-				this.branches.set(branch, []);
-			}
-			this.branches.get(branch).push(change);
-		});
+		const backendChanges = changes.map(ensureBackendChange);
+		this.addChangesToBranches(backendChanges);
 		const branch = this.collect();
 		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
 		this.witness(newToCurrentBranch);
@@ -56,10 +48,35 @@ export default class State<T = any> {
 		return newToCurrentBranch;
 	}
 
-	private collect(): BackendChange[] {
+	private addChangesToBranches(changes: BackendChange[]): void {
+		changes.forEach((change) => {
+			const {branch} = change;
+			if (!this.branches.has(branch)) {
+				this.branches.set(branch, []);
+			}
+			const incomingID = toID(change);
+			// TODO do this but faster!
+			if (!this.branches.get(branch).find((change) => toID(change) === incomingID)) {
+				this.branches.get(branch).push(change);
+			}
+		});
+		this.branches.forEach((branch) => branch.sort(changeSortCompare));
+	}
+
+	private collect(ref?: string): BackendChange[] {
+		ref ??= this.ref();
 		// TODO more complicated that this...
 		// TODO don't forget to do the sort `.sort(changeSortCompare);`
-		return (this.branches.get(this.ref()) ?? []).sort(changeSortCompare);
+		return (this.branches.get(ref) ?? []).sort(changeSortCompare);
+	}
+
+	public checkout(ref: string): void {
+		this._ref = ref;
+		this._seen = new Set();
+		this.clock = 0;
+		const branch = this.collect();
+		this.witness(branch);
+		this.reapply(branch);
 	}
 
 	private seen(change: Change | ID): boolean {
@@ -76,8 +93,9 @@ export default class State<T = any> {
 		return this.clock + 1;
 	}
 
-	public latest(): ID | undefined {
-		const branch = this.collect();
+	public latest(ref?: string): ID | undefined {
+		ref ??= this.ref();
+		const branch = this.collect(ref);
 		if (branch.length > 0) {
 			return toID(branch[branch.length - 1]);
 		} else {
@@ -222,7 +240,7 @@ export default class State<T = any> {
 		return render(this.objects);
 	}
 
-	public ref(): ID {
+	public ref(): string {
 		return this._ref; // TODO
 	}
 }

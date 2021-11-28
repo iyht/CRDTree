@@ -656,6 +656,29 @@ describe("CRDTree", () => {
 				expect(tree).to.be.on(ref);
 			});
 
+			it("should be able to fork multiple times", () => {
+				const forkA = tree.fork();
+				const forkB = tree.fork();
+				expect(tree).to.be.on(forkB);
+				expect(forkA).to.not.equal(forkB);
+			});
+
+			it("should be able to fork multiple times from the same place in time", () => {
+				const main = tree.ref();
+				tree.assign([], []);
+				const forkA = tree.fork();
+				tree.insert([0], 1);
+				tree.checkout(main);
+				const forkB = tree.fork();
+				tree.insert([0], 2);
+				expect(tree).to.be.on(forkB);
+				expect(forkA).to.not.equal(forkB);
+				tree.checkout(main);
+				tree.join(forkA);
+				tree.join(forkB);
+				expect(tree).asOneOf([1, 2], [2, 1]);
+			});
+
 			it("should preserve changes from before the fork", () => {
 				tree.assign([], "change");
 				tree.fork();

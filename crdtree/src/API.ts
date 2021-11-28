@@ -11,7 +11,7 @@ export interface ICRDTree<T = any> {
 
 	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
 	// returns affected forks
-	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): ID[];
+	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): string[];
 
 	assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void;
 
@@ -23,12 +23,12 @@ export interface ICRDTree<T = any> {
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
 
-	ref(): ID;
+	ref(): string;
 
-	listRefs(): ID[];
+	listRefs(): string[];
 
-	fork(): ID;
+	fork(): string;
 
-	join(ref: ID): void; // same fork is a no-op
-	checkout(ref: ID): void;
+	join(ref: string): void; // same fork is a no-op
+	checkout(ref: string): void;
 }
