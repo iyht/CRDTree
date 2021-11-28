@@ -72,6 +72,10 @@ export default class State<T = any> {
 		return this.branch;
 	}
 
+	public getAllBranches(): BranchID[] {
+		return Array.from(this.branchMap.keys());
+	}
+
 	// TODO verify we don't have to affect this, given we maintain invariant this.objects is tracking branch only
 	public getElement(indices: Index[]): ID {
 		return this.getElementImpl([ROOT, ...indices]);

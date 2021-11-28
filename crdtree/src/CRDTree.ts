@@ -123,7 +123,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public listRefs(): BranchID[] {
-		return [];
+		return this.state.getAllBranches();
 	}
 
 	public ref(): BranchID {
