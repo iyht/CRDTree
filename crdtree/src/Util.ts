@@ -11,4 +11,11 @@ const assertSerializable = (item: unknown): void => {
 	}
 };
 
-export {assertSerializable};
+const ensureNumber = (maybeNumber: any): number => {
+	if (typeof maybeNumber !== "number" || !isFinite(maybeNumber)) {
+		throw new RangeError("Must use numbers to index into arrays");
+	}
+	return maybeNumber; // definitely number
+};
+
+export {assertSerializable, ensureNumber};

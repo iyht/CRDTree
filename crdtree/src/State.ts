@@ -14,6 +14,8 @@ import {
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
+import {render} from "./Renderer";
+import {ensureNumber} from "./Util";
 
 export default class State<T = any> {
 	private objects: MetaMap;
@@ -66,18 +68,11 @@ export default class State<T = any> {
 			if (metaObject instanceof Map) {
 				entry = metaObject.get(index);
 			} else {
-				entry = metaObject[findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
+				entry = metaObject[findIndexInTombstoneArray(metaObject, ensureNumber(index))];
 			}
 			return entry?.deleted ? undefined :
 				entry?.kind === ObjectKind.OTHER ? entry?.name : (entry?.value as ID);
 		}, ROOT_PARENT) as ID;
-	}
-
-	private static ensureNumber(maybeNumber: any): number {
-		if (typeof maybeNumber !== "number" || !isFinite(maybeNumber)) {
-			throw new RangeError("Must use numbers to index into arrays");
-		}
-		return maybeNumber; // definitely number
 	}
 
 	public addChange(changes: Change[]): BackendChange[] {
@@ -204,36 +199,6 @@ export default class State<T = any> {
 	}
 
 	public render(): T {
-		const metaObject = this.getMetaObject(ROOT_PARENT) as Map<Index, Entry>;
-		if (metaObject.get(ROOT).deleted) {
-			return undefined;
-		} else {
-			return this.renderRecursiveMap(metaObject)[ROOT];
-		}
-	}
-
-	private renderRecursiveMap(metaObject: Map<Index, Entry>): any {
-		return Array.from(metaObject.entries()).reduce((element: any, [index, entry]): any => {
-			if (entry.deleted === false) {
-				element[index] = this.renderRecursive(entry);
-			}
-			return element;
-		}, {});
-	}
-
-	private renderRecursiveList(metaObject: Array<Entry>): any {
-		return metaObject.filter((entry) => entry.deleted === false)
-			.map((entry) => this.renderRecursive(entry));
-	}
-
-	private renderRecursive(entry: Entry): any {
-		const {value, kind} = entry;
-		if (kind !== ObjectKind.OTHER) {
-			const metaObject = this.getMetaObject(value as ID);
-			return Array.isArray(metaObject) ?
-				this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
-		} else {
-			return value;
-		}
+		return render(this.objects);
 	}
 }
