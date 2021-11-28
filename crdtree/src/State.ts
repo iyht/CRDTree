@@ -1,4 +1,4 @@
-import {ID, Index} from "./API";
+import {ID, Index, BranchID} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
 import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
@@ -19,6 +19,7 @@ export default class State<T = any> {
 	private objects: MetaMap;
 	private _seen: Set<ID>;
 	private clock: number;
+	private branch: BranchID;  // make into branch ID type later?
 
 	constructor(private readonly changes: BackendChange[]) {
 		this.clock = changes[changes.length - 1]?.clock ?? 0;

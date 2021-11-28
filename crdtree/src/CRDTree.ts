@@ -1,5 +1,5 @@
 import State from "./State";
-import {CRDTreeTransport, ICRDTree, ID, Index} from "./API";
+import {BranchID, CRDTreeTransport, ICRDTree, ID, Index} from "./API";
 import {ROOT} from "./Constants";
 import {BackendChange, Change} from "./Change";
 import {ActionKind, FrontendAction} from "./Action";
@@ -106,23 +106,23 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		return [];
 	}
 
-	public fork(): ID {
+	public fork(): BranchID {
 		return undefined;
 	}
 
-	public join(ref: ID): void {
+	public join(ref: BranchID): void {
 		return;
 	}
 
-	public listRefs(): ID[] {
+	public listRefs(): BranchID[] {
 		return [];
 	}
 
-	public ref(): ID {
+	public ref(): BranchID {
 		return undefined;
 	}
 
-	public checkout(ref: ID): void {
+	public checkout(ref: BranchID): void {
 		return;
 	}
 }

@@ -3,6 +3,7 @@ import {HEAD, ROOT, ROOT_PARENT} from "./Constants";
 import {BackendChange} from "./Change";
 
 export type ID = `${string}@${number}` | HEAD | ROOT | ROOT_PARENT;
+export type BranchID = string;
 export type Index = number | string;
 export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
@@ -23,12 +24,12 @@ export interface ICRDTree<T = any> {
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
 
-	ref(): ID;
+	ref(): BranchID;
 
-	listRefs(): ID[];
+	listRefs(): BranchID[];
 
-	fork(): ID;
+	fork(): BranchID;
 
-	join(ref: ID): void; // same fork is a no-op
-	checkout(ref: ID): void;
+	join(ref: BranchID): void; // same fork is a no-op
+	checkout(ref: BranchID): void;
 }
