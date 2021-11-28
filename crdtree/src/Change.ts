@@ -1,11 +1,12 @@
 import {ActionKind, BackendAction, FrontendAction} from "./Action";
-import {ID} from "./API";
+import {BranchID, ID} from "./API";
 import {isBackendPrimitive, toObjectPrimitive} from "./Primitive";
 
 type ChangeBase = {
 	pid: string;
 	clock: number;
 	dep: ID | undefined;
+	branch: BranchID;
 };
 export type FrontendChange = ChangeBase & { action: FrontendAction };
 export type BackendChange = ChangeBase & { action: BackendAction };
@@ -18,7 +19,8 @@ const toID = (change: Change): ID => {
 
 const ensureBackendChange = (change: Change): BackendChange => {
 	const {kind} = change.action;
-	if (kind === ActionKind.DELETE || kind === ActionKind.NOOP || isBackendPrimitive(change.action.item)) {
+	if (kind === ActionKind.DELETE || kind === ActionKind.NOOP || kind === ActionKind.FORK || kind === ActionKind.JOIN ||
+		isBackendPrimitive(change.action.item)) {
 		return change as BackendChange;
 	} else {
 		const {pid, clock} = change;

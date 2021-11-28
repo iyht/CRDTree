@@ -1,4 +1,4 @@
-import {ID, Index} from "./API";
+import {BranchID, ID, Index} from "./API";
 import {BackendPrimitive, FrontendPrimitive} from "./Primitive";
 
 export enum ActionKind {
@@ -7,6 +7,8 @@ export enum ActionKind {
 	INSERT,
 	DELETE,
 	NOOP,
+	FORK,
+	JOIN,
 }
 
 type BaseAssignment = {
@@ -37,7 +39,17 @@ export type Deletion = {
 export type NoOp = {
 	kind: ActionKind.NOOP;
 };
-type Action = Deletion | NoOp;
+export type Fork = {
+	kind: ActionKind.FORK;
+	parent: ID;
+	parentBranch: BranchID;
+}
+export type Join = {
+	kind: ActionKind.JOIN;
+	joinedTime: ID;
+	joinedBranch: BranchID;
+}
+type Action = Deletion | NoOp | Fork | Join;
 export type FrontendAction = Action | FrontendAssignment | FrontendInsertion;
 export type BackendAction = Action | BackendAssignment | BackendListAssignment | BackendInsertion;
 

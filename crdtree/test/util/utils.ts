@@ -1,5 +1,5 @@
 import * as chai from "chai";
-import {ICRDTree, ID} from "../../src/API";
+import {BranchID, ICRDTree, ID} from "../../src/API";
 import * as fs from "fs";
 
 chai.Assertion.addMethod('render', function (expectedRender) {
@@ -41,7 +41,7 @@ declare global {
 			merge: (remote: ICRDTree) => Assertion;
 			as: (val: any) => Assertion;
 			asOneOf: (...renders: any[]) => Assertion;
-			on: (id: ID) => Assertion;
+			on: (id: BranchID) => Assertion;
 		}
 	}
 }
