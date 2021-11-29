@@ -24,7 +24,7 @@ export default class State<T = any> {
 	private _ref: string;
 	private clock: number;
 	private stored: BackendChange[];
-	private readonly branches: Map<string, BackendChange[]>;
+	private readonly branches: Map<string, Map<ID, BackendChange>>;
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
@@ -57,22 +57,20 @@ export default class State<T = any> {
 	}
 
 	private addChangesToBranches(changes: BackendChange[]): BackendChange[] {
-		const newToThisNode = changes.filter((change) => {
+		return changes.filter((change) => {
 			const {branch} = change;
 			if (!this.branches.has(branch)) {
-				this.branches.set(branch, []);
+				this.branches.set(branch, new Map<ID, BackendChange>());
 			}
 			const incomingID = toID(change);
 			// TODO do this but faster!
-			if (!this.branches.get(branch).find((change) => toID(change) === incomingID)) {
-				this.branches.get(branch).push(change);
+			if (!this.branches.get(branch).has(incomingID)) {
+				this.branches.get(branch).set(incomingID, change);
 				return true;
 			} else {
 				return false;
 			}
 		});
-		this.branches.forEach((branch) => branch.sort(changeSortCompare));
-		return newToThisNode;
 	}
 
 	private collect(ref?: string): BackendChange[] {
@@ -82,8 +80,8 @@ export default class State<T = any> {
 	}
 
 	private collectImpl(ref: string, after?: ID): Map<ID, BackendChange> {
-		const changes = this.branches.get(ref) ?? [];
-		const relevantChanges = changes.filter((change) => {
+		const changes = this.branches.get(ref) ?? new Map<ID, BackendChange>();
+		const relevantChanges = Array.from(changes.values()).filter((change) => {
 			if (!after) {
 				return true;
 			}
@@ -265,7 +263,7 @@ export default class State<T = any> {
 	public listChanges(): BackendChange[] {
 		const changes = [];
 		for (const branch of this.branches.values()) {
-			changes.push(...branch);
+			changes.push(...branch.values());
 		}
 		return changes;
 	}
