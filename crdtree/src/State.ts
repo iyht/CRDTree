@@ -29,7 +29,7 @@ export default class State<T = any> {
 		this._seen = new Set<ID>();
 		this.branch = MAIN;
 		this.branchMap = new Map<BranchID, Map<BranchID, Change>>();
-		this.branchMap[MAIN]= new Map<BranchID, Change>();
+		this.branchMap.set(MAIN, new Map<BranchID, Change>());
 		this.witness(this.changes);
 		this.reapplyAllChanges();
 	}
