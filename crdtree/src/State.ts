@@ -47,7 +47,7 @@ export default class State<T = any> {
 			this.updateClock(branch);
 			this.reapply(branch);
 		}
-		return newToCurrentBranch;
+		return backendChanges;
 	}
 
 	private updateClock(changes: Change[]): void {
