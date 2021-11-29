@@ -119,6 +119,12 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public join(ref: BranchID): void {
+		this.makeChange({
+			kind: ActionKind.JOIN,
+			joinedAt: this.state.latest(),
+			joinedBranch: ref,
+		})
+		this.state.joinBranch(ref);
 		return;
 	}
 

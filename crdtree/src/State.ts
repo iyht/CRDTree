@@ -49,8 +49,12 @@ export default class State<T = any> {
 	}
 
 	public latest(): ID | undefined {
+		return this.latestFrom(this.branch);
+	}
+
+	public latestFrom(ref: BranchID): ID | undefined {
 		const backendChanges = this.changes
-			.filter((change) => checkCausallyRelevant(change, this.branch, this.branchMap));
+			.filter((change) => checkCausallyRelevant(change, ref, this.branchMap));
 		if (backendChanges.length > 0) {
 			return toID(backendChanges[backendChanges.length - 1]);
 		} else {
@@ -59,8 +63,12 @@ export default class State<T = any> {
 	}
 
 	public latestChange(): BackendChange | undefined {
+		return this.latestChangeFrom(this.branch);
+	}
+
+	public latestChangeFrom(ref: BranchID): BackendChange | undefined {
 		const backendChanges = this.changes
-			.filter((change) => checkCausallyRelevant(change, this.branch, this.branchMap));
+			.filter((change) => checkCausallyRelevant(change, ref, this.branchMap));
 		if (backendChanges.length > 0) {
 			return backendChanges[backendChanges.length - 1];
 		} else {
@@ -278,6 +286,12 @@ export default class State<T = any> {
 
 	public changeBranch(ref: BranchID): void {
 		this.branch = ref;
+		this.reapplyAllChanges();
+	}
+
+	public joinBranch(ref: BranchID): void {
+		let predMaps = this.branchMap.get(this.branch);
+		predMaps.set(ref, this.latestChangeFrom(ref));
 		this.reapplyAllChanges();
 	}
 }

@@ -46,7 +46,7 @@ export type Fork = {
 }
 export type Join = {
 	kind: ActionKind.JOIN;
-	joinedTime: ID;
+	joinedAt: ID;
 	joinedBranch: BranchID;
 }
 type Action = Deletion | NoOp | Fork | Join;
