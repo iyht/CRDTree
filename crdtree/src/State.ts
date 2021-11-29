@@ -43,10 +43,10 @@ export default class State<T = any> {
 		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
 		this.witness(newToCurrentBranch);
 		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
-			this.updateClock(branch);
-			this.applyChanges(newToCurrentBranch);
+			this.updateClock(branch); // Has to be in branch bc clock is checked above in predicate
+			this.applyChanges(newToCurrentBranch.concat(this.stored).sort(changeSortCompare));
 		} else if (newToCurrentBranch.length > 0) {
-			this.updateClock(branch);
+			this.updateClock(branch); // already should include all stored commits
 			this.reapply(branch);
 		}
 		return newToThisNode;
@@ -63,7 +63,6 @@ export default class State<T = any> {
 				this.branches.set(branch, new Map<ID, BackendChange>());
 			}
 			const incomingID = toID(change);
-			// TODO do this but faster!
 			if (!this.branches.get(branch).has(incomingID)) {
 				this.branches.get(branch).set(incomingID, change);
 				return true;
@@ -171,8 +170,7 @@ export default class State<T = any> {
 	}
 
 	private applyChanges(changes: BackendChange[]): void {
-		const allChanges = changes.concat(this.stored);
-		const groupedChanges = allChanges.partition((change: BackendChange) =>
+		const groupedChanges = changes.partition((change: BackendChange) =>
 			!change.dep || this.seen(change.dep));
 		const changesToApply = groupedChanges.get(true) ?? [];
 		changesToApply.forEach((change: BackendChange) => this.applyChange(change));
