@@ -30,7 +30,7 @@
 	"include": [
 		"src",
 		"test"
-	],
+, "network/RootNetwork.ts"	],
 	"exclude": [
 		"node_modules"
 	]

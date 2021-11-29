@@ -8,8 +8,12 @@ const { NOISE } = require('libp2p-noise') // connection encryption
 const Mplex = require('libp2p-mplex') // stream multiplexing for reusing connection
 const MulticastDNS = require('libp2p-mdns')
 const WebrtcStar = require('libp2p-webrtc-star')
+const SignalingServer = require('libp2p-webrtc-star/src/sig-server')
+const PeerId = require('peer-id')
+
 
 // peer discover
+const KademliaDHT = require('libp2p-kad-dht')
 const Bootstrap = require('libp2p-bootstrap')
 const MDNS = require('libp2p-mdns')
 const KadDHT = require('libp2p-kad-dht')
@@ -26,10 +30,9 @@ const createNode = async (bootstrapHost = null) => {
       ] // assign any port available locally
     },
     modules: {
-      transport: [TCP],
+      transport: [ TCP, Websockets, WebrtcStar ],
       streamMuxer: [Mplex],
       connEncryption: [NOISE],
-      // peerDiscovery: [MulticastDNS]
       peerDiscovery: [ Bootstrap, MDNS ],
       dht: KadDHT,
       pubsub: Gossipsub
@@ -42,8 +45,7 @@ const createNode = async (bootstrapHost = null) => {
       },
       peerDiscovery: {
         bootstrap: {
-          list: [ bootstrapHost ]
-        }
+          list: [ bootstrapHost ]        }
       },
       dht: {
         enabled: true,
@@ -56,4 +58,45 @@ const createNode = async (bootstrapHost = null) => {
 
   return node
 }
-export {createNode};
+
+
+
+const createBootstrapNode = (peerId, listenAddrs) => {
+  return Libp2p.create({
+    peerId,
+    addresses: {
+      listen: listenAddrs
+    },
+    modules: {
+      transport: [ WebrtcStar, TCP, Websockets ],
+      streamMuxer: [ Mplex ],
+      connEncryption: [ NOISE ],
+      peerDiscovery: [ MDNS ],
+      dht: KademliaDHT,
+      pubsub: Gossipsub
+    },
+    config: {
+      transport : {
+        [WebrtcStar.prototype[Symbol.toStringTag]]: {
+          wrtc
+        }
+      },
+      relay: {
+        enabled: true,
+        hop: {
+          enabled: true,
+          active: false
+        }
+      },
+      dht: {
+        enabled: true,
+        randomWalk: {
+          enabled: true
+        }
+      }
+    }
+  })
+}
+
+
+export {createNode, createBootstrapNode, SignalingServer, PeerId};

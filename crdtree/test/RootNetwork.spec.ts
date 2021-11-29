@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {RootNetwork} from "../src/RootNetwork";
+import {RootNetwork} from "../network/RootNetwork";
 import {CRDTreeTransport} from "../src/API";
 
 /*
