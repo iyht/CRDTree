@@ -6,6 +6,7 @@ import {ActionKind, FrontendAction} from "./Action";
 import {FrontendPrimitive} from "./Primitive";
 import {assertSerializable} from "./Util";
 import {uuid} from "./UUID";
+import assert from "assert";
 
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
@@ -19,6 +20,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private makeChange(action: FrontendAction, ref?: BranchID): void {
+		assert(ref == undefined || action.kind == ActionKind.FORK);
 		const backendChanges = this.insertChanges([{
 			action: action,
 			clock: this.state.next(),
