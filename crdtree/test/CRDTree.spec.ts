@@ -851,6 +851,81 @@ describe("CRDTree", () => {
 					treeB.checkout(fork);
 					expect(treeB).to.render({foo: {foo: "bar"}});
 				});
+
+				it("should keep the correct dependencies across forks", async () => {
+					// setup
+					const updates = [];
+					const main = treeA.ref();
+					treeA.onUpdate((update) => updates.push(...update));
+
+					treeA.assign(["foo"], {}); // On main branch
+					expect(treeA).to.render({foo: {}});
+
+					const fork = treeA.fork(); // check out a feature branch
+					treeA.assign(["foo", "foo"], "bar"); // create nested item "bar"
+
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(treeA).to.render({foo: {foo: "bar"}}); // on fork
+					expect(treeB).to.render({}); // still on main branch
+
+					expect(updates).to.have.length(3);
+
+					treeB.merge([updates.pop()]); // treeA.assign(["foo", "foo"], "bar");
+					expect(treeB.listRefs()).to.include(fork);
+					treeB.checkout(fork);
+					expect(treeB).to.render(undefined); // don't know what's on the fork yet, just that it exists
+					treeB.merge([updates.pop()]); // treeA.fork();
+					expect(treeB).to.render({}); // just discovered where we are forking from
+					treeB.merge([updates.pop()]); // treeA.assign(["foo"], {});
+
+					expect(treeB).to.render({foo: {foo: "bar"}});
+					treeB.checkout(main);
+					expect(treeB).to.render({foo: {}});
+				});
+
+				it("should call callback functions when merging in from another tree", async () => {
+					const updates = [];
+					treeB.onUpdate((update) => updates.push(...update));
+					const fork = treeA.fork();
+					treeA.assign(["foo"], {});
+					treeA.assign(["foo", "foo"], "bar");
+					expect(treeA).to.render({foo: {foo: "bar"}});
+					expect(treeB).to.render({});
+
+					treeB.merge(treeA);
+
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(updates).to.have.length(3);
+
+					expect(treeB.listRefs()).to.include(fork);
+					expect(treeB).to.render({});
+					treeB.checkout(fork);
+					expect(treeB).to.render({foo: {foo: "bar"}});
+				});
+
+				it("should call back registered functions only once when merging the same change multiple times", async () => {
+					const updates = [];
+					treeB.onUpdate((update) => updates.push(...update));
+					const fork = treeA.fork();
+					treeA.assign(["foo"], {});
+					treeA.assign(["foo", "foo"], "bar");
+					const treeAChanges = treeA.serialize();
+					expect(treeA).to.render({foo: {foo: "bar"}});
+					expect(treeB).to.render({});
+					treeB.merge(treeAChanges);
+					treeB.merge(treeAChanges);
+
+					expect(treeB.listRefs()).to.include(fork);
+					expect(treeB).to.render({});
+					treeB.checkout(fork);
+					expect(treeB).to.render({foo: {foo: "bar"}});
+
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(updates).to.have.length(3);
+				});
 			});
 		});
 	});
