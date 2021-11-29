@@ -1,5 +1,5 @@
 import {ID, Index} from "./API";
-import {HEAD, ROOT, ROOT_PARENT} from "./Constants";
+import {ROOT, ROOT_PARENT} from "./Constants";
 import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
@@ -23,6 +23,7 @@ export default class State<T = any> {
 	private _seen: Set<ID>;
 	private _ref: string;
 	private clock: number;
+	private stored: BackendChange[];
 	private readonly branches: Map<string, BackendChange[]>;
 
 	constructor(changes: BackendChange[]) {
@@ -30,6 +31,7 @@ export default class State<T = any> {
 		this.branches = new Map();
 		this._seen = new Set<ID>();
 		this.clock = 0;
+		this.stored = [];
 		this.reinitObjects();
 		this.addChanges(changes);
 	}
@@ -105,6 +107,7 @@ export default class State<T = any> {
 		this._ref = ref;
 		this._seen = new Set();
 		this.clock = 0;
+		this.stored = [];
 		const branch = this.collect();
 		this.witness(branch);
 		this.reapply(branch);
@@ -170,9 +173,12 @@ export default class State<T = any> {
 	}
 
 	private applyChanges(changes: BackendChange[]): void {
-		changes
-			.filter((change: BackendChange) => !change.dep || this.seen(change.dep))
-			.forEach((change: BackendChange) => this.applyChange(change));
+		const allChanges = changes.concat(this.stored);
+		const groupedChanges = allChanges.partition((change: BackendChange) =>
+			!change.dep || this.seen(change.dep));
+		const changesToApply = groupedChanges.get(true) ?? [];
+		changesToApply.forEach((change: BackendChange) => this.applyChange(change));
+		this.stored = groupedChanges.get(false) ?? [];
 	}
 
 	private applyChange(change: BackendChange): void {

@@ -18,4 +18,23 @@ const ensureNumber = (maybeNumber: any): number => {
 	return maybeNumber; // definitely number
 };
 
+declare global {
+	interface Array<T> {
+		partition<U>(key: (element: T) => U): Map<U, Array<T>>;
+	}
+}
+
+Array.prototype.partition = function <U>(keyFn: (element) => U): Map<U, Array<any>> {
+	const output = new Map();
+	for (const element of this) {
+		const key = keyFn(element);
+		if (output.has(key)) {
+			output.get(key).push(element);
+		} else {
+			output.set(key, [element]);
+		}
+	}
+	return output;
+};
+
 export {assertSerializable, ensureNumber};
