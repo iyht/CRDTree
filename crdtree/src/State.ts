@@ -36,7 +36,7 @@ export default class State<T = any> {
 
 	public addChanges(changes: Change[]): BackendChange[] {
 		const backendChanges = changes.map(ensureBackendChange);
-		this.addChangesToBranches(backendChanges);
+		const newToThisNode = this.addChangesToBranches(backendChanges);
 		const branch = this.collect();
 		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
 		this.witness(newToCurrentBranch);
@@ -47,15 +47,15 @@ export default class State<T = any> {
 			this.updateClock(branch);
 			this.reapply(branch);
 		}
-		return backendChanges;
+		return newToThisNode;
 	}
 
 	private updateClock(changes: Change[]): void {
 		this.clock = changes[changes.length - 1].clock;
 	}
 
-	private addChangesToBranches(changes: BackendChange[]): void {
-		changes.forEach((change) => {
+	private addChangesToBranches(changes: BackendChange[]): BackendChange[] {
+		const newToThisNode = changes.filter((change) => {
 			const {branch} = change;
 			if (!this.branches.has(branch)) {
 				this.branches.set(branch, []);
@@ -64,9 +64,13 @@ export default class State<T = any> {
 			// TODO do this but faster!
 			if (!this.branches.get(branch).find((change) => toID(change) === incomingID)) {
 				this.branches.get(branch).push(change);
+				return true;
+			} else {
+				return false;
 			}
 		});
 		this.branches.forEach((branch) => branch.sort(changeSortCompare));
+		return newToThisNode;
 	}
 
 	private collect(ref?: string): BackendChange[] {
