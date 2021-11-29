@@ -1,7 +1,7 @@
 import State from "./State";
 import {CRDTreeTransport, ICRDTree, ID, Index} from "./API";
 import {ROOT} from "./Constants";
-import {BackendChange, Change} from "./Change";
+import {BackendChange, Change, FrontendChange} from "./Change";
 import {ActionKind, FrontendAction} from "./Action";
 import {FrontendPrimitive} from "./Primitive";
 import {assertSerializable} from "./Util";
@@ -18,13 +18,13 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.state = new State<T>(from);
 	}
 
-	private makeChange(action: FrontendAction): void {
+	private makeChange(change: { action: FrontendAction } | FrontendChange): void {
 		this.insertChanges([{
-			action: action,
 			clock: this.state.next(),
 			pid: this.pid,
 			branch: this.state.ref(),
 			dep: this.state.latest(),
+			...change,
 		}]);
 	}
 
@@ -47,17 +47,21 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		const last = indices[indices.length - 1] ?? (ROOT as Index);
 		if (typeof last === "string") {
 			this.makeChange({
-				at: last,
-				in: this.getParentElement(indices),
-				item,
-				kind: ActionKind.ASSIGN,
+				action: {
+					at: last,
+					in: this.getParentElement(indices),
+					item,
+					kind: ActionKind.ASSIGN,
+				}
 			});
 		} else {
 			this.makeChange({
-				at: this.getElement(indices),
-				in: this.getParentElement(indices),
-				item,
-				kind: ActionKind.ASSIGN_LIST,
+				action: {
+					at: this.getElement(indices),
+					in: this.getParentElement(indices),
+					item,
+					kind: ActionKind.ASSIGN_LIST,
+				}
 			});
 		}
 	}
@@ -66,24 +70,30 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		assertSerializable(item);
 		const last: number = indices[indices.length - 1] as number;
 		this.makeChange({
-			after: this.getElement([...indices.slice(0, -1), last - 1]),
-			in: this.getParentElement(indices),
-			item,
-			kind: ActionKind.INSERT,
+			action: {
+				after: this.getElement([...indices.slice(0, -1), last - 1]),
+				in: this.getParentElement(indices),
+				item,
+				kind: ActionKind.INSERT,
+			}
 		});
 	}
 
 	public delete(indices: Index[]): void {
 		this.makeChange({
-			in: this.getParentElement(indices),
-			at: this.getElement(indices),
-			kind: ActionKind.DELETE,
+			action: {
+				in: this.getParentElement(indices),
+				at: this.getElement(indices),
+				kind: ActionKind.DELETE,
+			}
 		});
 	}
 
 	public noop(): void {
 		this.makeChange({
-			kind: ActionKind.NOOP,
+			action: {
+				kind: ActionKind.NOOP,
+			}
 		});
 	}
 
@@ -106,7 +116,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		const branch = uuid();
 		const {pid} = this;
 		this.state.checkout(branch); // VERY EXPENSIVE/WASTEFUL reapplication here lol
-		this.insertChanges([{
+		this.makeChange({
 			action: {
 				kind: ActionKind.FORK,
 				from,
@@ -116,15 +126,17 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 			pid,
 			branch,
 			dep,
-		}]);
+		});
 		return branch;
 	}
 
 	public join(ref: string): void {
 		this.makeChange({
-			kind: ActionKind.JOIN,
-			from: ref,
-			after: this.state.latest(ref),
+			action: {
+				kind: ActionKind.JOIN,
+				from: ref,
+				after: this.state.latest(ref),
+			}
 		});
 	}
 
