@@ -1,4 +1,4 @@
-import {Change, changeLt, toID} from "./Change";
+import {Change, toID} from "./Change";
 import {BranchID, ID} from "./API";
 import {nameLt} from "./Clock";
 

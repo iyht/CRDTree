@@ -15,7 +15,7 @@ import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
 import {BranchMap, checkCausallyRelevant} from "./Branch";
-import {uuid} from "./UUID";
+
 
 export default class State<T = any> {
 	private objects: MetaMap;
@@ -57,20 +57,6 @@ export default class State<T = any> {
 			.filter((change) => checkCausallyRelevant(change, ref, this.branchMap));
 		if (backendChanges.length > 0) {
 			return toID(backendChanges[backendChanges.length - 1]);
-		} else {
-			return undefined;
-		}
-	}
-
-	public latestChange(): BackendChange | undefined {
-		return this.latestChangeFrom(this.branch);
-	}
-
-	public latestChangeFrom(ref: BranchID): BackendChange | undefined {
-		const backendChanges = this.changes
-			.filter((change) => checkCausallyRelevant(change, ref, this.branchMap));
-		if (backendChanges.length > 0) {
-			return backendChanges[backendChanges.length - 1];
 		} else {
 			return undefined;
 		}
@@ -320,26 +306,8 @@ export default class State<T = any> {
 		}
 	}
 
-	public makeBranch(): BranchID {
-		let newBranchID = uuid();
-		let newPreds = new Map<BranchID, ID>();
-		if (this.latestChange() != undefined) {
-			newPreds.set(this.branch, this.latest());
-		}
-		this.branchMap.set(newBranchID, newPreds);
-		this.branch = newBranchID;
-		return newBranchID;
-	}
-
 	public changeBranch(ref: BranchID): void {
 		this.branch = ref;
-		this.reapplyAllChanges();
-	}
-
-	public joinBranch(ref: BranchID): void {
-		if (ref == this.branch) return;
-		let predMaps = this.branchMap.get(this.branch);
-		predMaps.set(ref, this.latestFrom(ref));
 		this.reapplyAllChanges();
 	}
 }
