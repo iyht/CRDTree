@@ -276,4 +276,8 @@ export default class State<T = any> {
 		return newBranchID;
 	}
 
+	public changeBranch(ref: BranchID): void {
+		this.branch = ref;
+		this.reapplyAllChanges();
+	}
 }

@@ -131,6 +131,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public checkout(ref: BranchID): void {
+		this.state.changeBranch(ref);
 		return;
 	}
 }
