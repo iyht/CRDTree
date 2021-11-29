@@ -24,7 +24,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 			clock: this.state.next(),
 			pid: this.pid,
 			branch: this.state.ref(),
-			dep: this.state.latest(), // TODO this is wrong
+			dep: this.state.latest(),
 		}]);
 	}
 
@@ -100,15 +100,24 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public fork(): string {
-		const oldBranch = this.state.ref();
-		const newBranch = uuid();
-		this.state.checkout(newBranch); // VERY EXPENSIVE/WASTEFUL reapplication here lol
-		this.makeChange({
-			kind: ActionKind.FORK,
-			from: oldBranch,
-			after: this.state.latest(oldBranch),
-		});
-		return newBranch;
+		const from = this.state.ref();
+		const clock = this.state.next();
+		const dep = this.state.latest();
+		const branch = uuid();
+		const {pid} = this;
+		this.state.checkout(branch); // VERY EXPENSIVE/WASTEFUL reapplication here lol
+		this.insertChanges([{
+			action: {
+				kind: ActionKind.FORK,
+				from,
+				after: dep,
+			},
+			clock,
+			pid,
+			branch,
+			dep,
+		}]);
+		return branch;
 	}
 
 	public join(ref: string): void {
