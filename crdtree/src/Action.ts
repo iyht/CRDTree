@@ -69,4 +69,8 @@ const isDeletion = backendActionIsKind(ActionKind.DELETE) as (action: BackendAct
 
 const isNoOp = backendActionIsKind(ActionKind.NOOP) as (action: BackendAction) => action is NoOp;
 
-export {isBackendAssignment, isBackendListAssignment, isBackendInsertion, isDeletion, isNoOp};
+const isFork = backendActionIsKind(ActionKind.FORK) as (action: BackendAction) => action is Fork;
+
+const isJoin = backendActionIsKind(ActionKind.JOIN) as (action: BackendAction) => action is Join;
+
+export {isBackendAssignment, isBackendListAssignment, isBackendInsertion, isDeletion, isNoOp, isFork, isJoin};

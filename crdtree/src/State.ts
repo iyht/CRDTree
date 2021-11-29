@@ -5,11 +5,11 @@ import {
 	BackendAssignment,
 	BackendInsertion,
 	BackendListAssignment,
-	Deletion,
+	Deletion, Fork, Join,
 	isBackendAssignment,
 	isBackendInsertion,
 	isBackendListAssignment,
-	isDeletion
+	isDeletion, isFork, isJoin
 } from "./Action";
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
@@ -21,15 +21,15 @@ export default class State<T = any> {
 	private objects: MetaMap;
 	private _seen: Set<ID>;
 	private clock: number;
-	private branch: BranchID;  // make into branch ID type later?
+	private branch: BranchID;
 	private branchMap: BranchMap;
 
 	constructor(private readonly changes: BackendChange[]) {
 		this.clock = changes[changes.length - 1]?.clock ?? 0;
 		this._seen = new Set<ID>();
 		this.branch = MAIN;
-		this.branchMap = new Map<BranchID, Map<BranchID, Change>>();
-		this.branchMap.set(MAIN, new Map<BranchID, Change>());
+		this.branchMap = new Map<BranchID, Map<BranchID, ID>>();
+		this.branchMap.set(MAIN, new Map<BranchID, ID>());
 		this.witness(this.changes);
 		this.reapplyAllChanges();
 	}
@@ -122,11 +122,16 @@ export default class State<T = any> {
 			.map(ensureBackendChange)
 			.sort(changeSortCompare);
 		this.witness(backendChanges);
+		const predMapChanges = backendChanges.filter((change: BackendChange) =>
+			isFork(change.action) || isJoin(change.action));
 		if (backendChanges.length > 0 && backendChanges[0].clock > this.clock) {
 			this.appendChanges(backendChanges);
 			this.applyChanges(backendChanges);
 		} else if (backendChanges.length > 0) {
 			this.insertChanges(backendChanges);
+			this.reapplyAllChanges();
+		}
+		if (predMapChanges.length > 0) {
 			this.reapplyAllChanges();
 		}
 		return backendChanges;
@@ -137,6 +142,7 @@ export default class State<T = any> {
 		this.changes.push(...changes);
 	}
 
+	// TODO verify
 	private insertChanges(changes: BackendChange[]): void {
 		this.changes.push(...changes);
 		this.changes.sort(changeSortCompare);
@@ -146,7 +152,13 @@ export default class State<T = any> {
 		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
+		this.scanBranchMap(this.changes);
 		this.applyChanges(this.changes);
+	}
+
+	private scanBranchMap(changes: BackendChange[]): void {
+		changes.filter((change: BackendChange) => isFork(change.action) || isJoin(change.action))
+			.forEach((change: BackendChange) => this.registerPredecessor(change));
 	}
 
 	private applyChanges(changes: BackendChange[]): void {
@@ -168,6 +180,16 @@ export default class State<T = any> {
 		}
 	}
 
+	private registerPredecessor(change: BackendChange): void {
+		const {action} = change;
+		if (isFork(action)) {
+			this.registerFork(change);
+		} else if (isJoin(action)) {
+			this.registerJoin(change);
+		}
+	}
+
+	// TODO verify
 	private getMetaObject(name: ID): MetaObject {
 		const currentMap = this.objects.get(name);
 		if (!currentMap) {
@@ -235,6 +257,31 @@ export default class State<T = any> {
 		}
 	}
 
+	private registerFork(forkChange: BackendChange): void {
+		let fork = forkChange.action as Fork;
+		let predMap = this.branchMap.get(forkChange.branch);
+		if (predMap != undefined) {
+			predMap.set(fork.parentBranch, fork.parent);
+		} else {
+			predMap = new Map<BranchID, ID>();
+			predMap.set(fork.parentBranch, fork.parent);
+			this.branchMap.set(forkChange.branch, predMap);
+		}
+	}
+
+	private registerJoin(joinChange: BackendChange): void {
+		let join = joinChange.action as Join;
+		if (join.joinedBranch == joinChange.branch) return;
+		let predMap = this.branchMap.get(joinChange.branch);
+		if (predMap != undefined) {
+			predMap.set(join.joinedBranch, join.joinedAt);
+		} else {
+			predMap = new Map<BranchID, ID>();
+			predMap.set(join.joinedBranch, join.joinedAt);
+			this.branchMap.set(joinChange.branch, predMap);
+		}
+	}
+
 	public listChanges(): BackendChange[] {
 		return this.changes.slice();
 	}
@@ -275,9 +322,9 @@ export default class State<T = any> {
 
 	public makeBranch(): BranchID {
 		let newBranchID = uuid();
-		let newPreds = new Map<BranchID, Change>();
+		let newPreds = new Map<BranchID, ID>();
 		if (this.latestChange() != undefined) {
-			newPreds.set(this.branch, this.latestChange());
+			newPreds.set(this.branch, this.latest());
 		}
 		this.branchMap.set(newBranchID, newPreds);
 		this.branch = newBranchID;
@@ -292,7 +339,7 @@ export default class State<T = any> {
 	public joinBranch(ref: BranchID): void {
 		if (ref == this.branch) return;
 		let predMaps = this.branchMap.get(this.branch);
-		predMaps.set(ref, this.latestChangeFrom(ref));
+		predMaps.set(ref, this.latestFrom(ref));
 		this.reapplyAllChanges();
 	}
 }

@@ -18,13 +18,13 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.state = new State<T>(from);
 	}
 
-	private makeChange(action: FrontendAction): void {
+	private makeChange(action: FrontendAction, ref?: BranchID): void {
 		const backendChanges = this.insertChanges([{
 			action: action,
 			clock: this.state.next(),
 			pid: this.pid,
 			dep: this.state.latest(),
-			branch: this.state.getBranchID(),
+			branch: ref ?? this.state.getBranchID(),
 		}]);
 		this.callbacks.forEach((callback) =>
 			setImmediate(callback, backendChanges));
@@ -108,23 +108,27 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public fork(): BranchID {
-		let curBranch = this.state.getBranchID();
-		let newBranch = this.state.makeBranch();
+		let newBranch: BranchID = uuid();
+		this.forkWithRef(newBranch);
+		this.checkout(newBranch);
+		return newBranch;
+	}
+
+	private forkWithRef(ref: BranchID): void {
 		this.makeChange({
 			kind: ActionKind.FORK,
 			parent: this.state.latest(),
-			parentBranch: curBranch,
-		});
-		return newBranch;
+			parentBranch: this.state.getBranchID(),
+		}, ref);
 	}
 
 	public join(ref: BranchID): void {
 		this.makeChange({
 			kind: ActionKind.JOIN,
-			joinedAt: this.state.latest(),
+			joinedAt: this.state.latestFrom(ref),
 			joinedBranch: ref,
-		})
-		this.state.joinBranch(ref);
+		});
+		this.checkout(this.state.getBranchID());
 		return;
 	}
 
