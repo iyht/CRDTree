@@ -607,7 +607,7 @@ describe("CRDTree", () => {
 			});
 		});
 
-		describe("stress test", () => {
+		xdescribe("stress test", () => {
 			const text = readResource("text.txt");
 			const characters = text.split("");
 			const reversedCharacters = characters.slice().reverse();

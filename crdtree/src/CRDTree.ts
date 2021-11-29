@@ -24,7 +24,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 			clock: this.state.next(),
 			pid: this.pid,
 			branch: this.state.ref(),
-			dep: this.state.latest(),
+			dep: this.state.latest(), // TODO this is wrong
 		}]);
 		this.callbacks.forEach((callback) =>
 			setImmediate(callback, backendChanges));
@@ -132,10 +132,10 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public listRefs(): string[] {
-		return []; // TODO
+		return this.state.listRefs();
 	}
 
 	public checkout(ref: string): void {
-		return; // TODO
+		this.state.checkout(ref);
 	}
 }

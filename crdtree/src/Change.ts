@@ -13,8 +13,8 @@ export type BackendChange = ChangeBase & { action: BackendAction };
 export type Change = FrontendChange | BackendChange;
 
 const toID = (change: Change): ID => {
-	const {pid, clock} = change;
-	return `${pid}@${clock}` as ID;
+	const {pid, clock, branch} = change;
+	return `${pid}@${branch}@${clock}` as ID;
 };
 
 const ensureBackendChange = (change: Change): BackendChange => {
@@ -24,8 +24,7 @@ const ensureBackendChange = (change: Change): BackendChange => {
 		isBackendPrimitive(change.action.item)) {
 		return change as BackendChange;
 	} else {
-		const {pid, clock} = change;
-		const name: ID = `${pid}@${clock}`;
+		const name: ID = toID(change);
 		const item = toObjectPrimitive(name, change.action.item);
 		const action = {...change.action, item};
 		return {...change, action};

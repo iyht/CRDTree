@@ -9,13 +9,14 @@ import {
 	isBackendAssignment,
 	isBackendInsertion,
 	isBackendListAssignment,
-	isDeletion
+	isDeletion, isFork, isJoin
 } from "./Action";
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
 import {render} from "./Renderer";
 import {ensureNumber} from "./Util";
+import {nameLt} from "./Clock";
 
 export default class State<T = any> {
 	private objects: MetaMap;
@@ -40,12 +41,17 @@ export default class State<T = any> {
 		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
 		this.witness(newToCurrentBranch);
 		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
-			this.appendChanges(newToCurrentBranch);
+			this.updateClock(branch);
 			this.applyChanges(newToCurrentBranch);
 		} else if (newToCurrentBranch.length > 0) {
+			this.updateClock(branch);
 			this.reapply(branch);
 		}
 		return newToCurrentBranch;
+	}
+
+	private updateClock(changes: Change[]): void {
+		this.clock = changes[changes.length - 1].clock;
 	}
 
 	private addChangesToBranches(changes: BackendChange[]): void {
@@ -64,10 +70,31 @@ export default class State<T = any> {
 	}
 
 	private collect(ref?: string): BackendChange[] {
-		ref ??= this.ref();
-		// TODO more complicated that this...
-		// TODO don't forget to do the sort `.sort(changeSortCompare);`
-		return (this.branches.get(ref) ?? []).sort(changeSortCompare);
+		const changes = this.collectImpl(ref ?? this.ref());
+		const listChanges = Array.from(changes.values());
+		return listChanges.sort(changeSortCompare);
+	}
+
+	private collectImpl(ref: string, after?: ID): Map<ID, BackendChange> {
+		const changes = this.branches.get(ref) ?? [];
+		const relevantChanges = changes.filter((change) => {
+			if (!after) {
+				return true;
+			}
+			const changeID = toID(change);
+			return changeID === after || nameLt(toID(change), after)
+		});
+		const backendChangeOutput = new Map<ID, BackendChange>();
+		relevantChanges.forEach((change) => {
+			const {action} = change;
+			if (isFork(action) || isJoin(action)) {
+				const recurrence = this.collectImpl(action.from, action.after);
+				recurrence.forEach((value, key) =>
+					backendChangeOutput.set(key, value));
+			}
+			backendChangeOutput.set(toID(change), change);
+		});
+		return backendChangeOutput;
 	}
 
 	public checkout(ref: string): void {
@@ -127,10 +154,6 @@ export default class State<T = any> {
 		}, ROOT_PARENT) as ID;
 	}
 
-	private appendChanges(changes: BackendChange[]): void {
-		this.clock = changes[changes.length - 1].clock;
-	}
-
 	private reapply(changes: BackendChange[]): void {
 		this.reinitObjects();
 		this.applyChanges(changes);
@@ -149,6 +172,7 @@ export default class State<T = any> {
 	}
 
 	private applyChange(change: BackendChange): void {
+		this.clock = change.clock;
 		const {action} = change;
 		if (isBackendAssignment(action)) {
 			this.applyAssignment(action);
@@ -241,6 +265,10 @@ export default class State<T = any> {
 	}
 
 	public ref(): string {
-		return this._ref; // TODO
+		return this._ref;
+	}
+
+	public listRefs(): string[] {
+		return Array.from(this.branches.keys());
 	}
 }
