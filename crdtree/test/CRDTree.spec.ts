@@ -840,9 +840,8 @@ describe("CRDTree", () => {
 					expect(treeA).to.render({foo: {foo: "bar"}});
 					expect(treeB).to.render({});
 
-					expect(updates).to.have.length(4);
+					expect(updates).to.have.length(3);
 
-					treeB.merge([updates.pop()]);
 					treeB.merge([updates.pop()]);
 					treeB.merge([updates.pop()]);
 					treeB.merge([updates.pop()]);
