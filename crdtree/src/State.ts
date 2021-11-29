@@ -290,6 +290,7 @@ export default class State<T = any> {
 	}
 
 	public joinBranch(ref: BranchID): void {
+		if (ref == this.branch) return;
 		let predMaps = this.branchMap.get(this.branch);
 		predMaps.set(ref, this.latestChangeFrom(ref));
 		this.reapplyAllChanges();
