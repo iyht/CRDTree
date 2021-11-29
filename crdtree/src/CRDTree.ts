@@ -19,19 +19,19 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	private makeChange(action: FrontendAction): void {
-		const backendChanges = this.insertChanges([{
+		this.insertChanges([{
 			action: action,
 			clock: this.state.next(),
 			pid: this.pid,
 			branch: this.state.ref(),
 			dep: this.state.latest(), // TODO this is wrong
 		}]);
-		this.callbacks.forEach((callback) =>
-			setImmediate(callback, backendChanges));
 	}
 
-	private insertChanges(changes: Change[]): BackendChange[] {
-		return this.state.addChanges(changes);
+	private insertChanges(changes: Change[]): void {
+		const backendChanges = this.state.addChanges(changes);
+		this.callbacks.forEach((callback) =>
+			setImmediate(callback, backendChanges));
 	}
 
 	private getElement(indices: Index[]): ID {

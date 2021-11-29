@@ -861,9 +861,7 @@ describe("CRDTree", () => {
 					expect(treeA).to.render({foo: {foo: "bar"}});
 					expect(treeB).to.render({});
 
-					treeB.merge([updates.pop()]);
-					treeB.merge([updates.pop()]);
-					treeB.merge([updates.pop()]);
+					treeB.merge(treeA);
 
 					// enforce that callback gets executed
 					await new Promise((resolve) => setImmediate(resolve));
