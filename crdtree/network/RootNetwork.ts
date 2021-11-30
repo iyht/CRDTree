@@ -22,7 +22,7 @@ export interface INetwork<T = any> {
 	decode(msg: string): CRDTree;
 
 	// called by CRDTree to propagate to other processes
-	send(update: CRDTreeTransport<T>): void;
+	send(crdt: ICRDTree): void;
 
 	// when receiving an update, calls callback to let CRDTree handle it
 	onRecv(callback: (update: CRDTreeTransport<T>) => void): void;
@@ -30,6 +30,8 @@ export interface INetwork<T = any> {
 
 export class RootNetwork<T = any> implements INetwork<T> {
 	tmp_trans: CRDTreeTransport<T>;
+  	pubsubChat = new p2p.PubsubChat();
+
 
 
 	constructor() {
@@ -68,6 +70,30 @@ export class RootNetwork<T = any> implements INetwork<T> {
 			await libp2p.start()
 		
 			// TODO: CRDT client command handler 
+			  // Create our PubsubChat client
+  			this.pubsubChat.assign(libp2p, p2p.PubsubChat.TOPIC, ({ from, message }) => {
+  			  let fromMe = from === libp2p.peerId.toB58String()
+  			  let user = from.substring(0, 6)
+  			  if (this.pubsubChat.userHandles.has(from)) {
+  			    user = this.pubsubChat.userHandles.get(from)
+  			  }
+  			  console.info(`${fromMe ? p2p.PubsubChat.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}): ${message.data}`)
+  			})
+
+  			// Set up our input handler
+  			process.stdin.on('data', async (message) => {
+  			  // Remove trailing newline
+  			  message = message.slice(0, -1)
+  			  // If there was a command, exit early
+  			  if (this.pubsubChat.checkCommand(message)) return
+
+  			  try {
+  			    // Publish the message
+  			    await this.pubsubChat.send(message)
+  			  } catch (err) {
+  			    console.error('Could not publish chat', err)
+  			  }
+  			})
 		
 		})()
 		return;
@@ -130,8 +156,9 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		return;
 	}
 
-	send(update: CRDTreeTransport<T>): void {
-		return;
+	send(crdt: ICRDTree): void {
+		let msg: string = this.encode(crdt);
+		this.pubsubChat.send(msg);
 	}
 
 	onRecv(callback: <T>(update: CRDTreeTransport<T>) => void): void {

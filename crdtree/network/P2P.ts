@@ -10,7 +10,7 @@ const MulticastDNS = require('libp2p-mdns')
 const WebrtcStar = require('libp2p-webrtc-star')
 const SignalingServer = require('libp2p-webrtc-star/src/sig-server')
 const PeerId = require('peer-id')
-
+const PubsubChat = require('./chat')
 
 // peer discover
 const KademliaDHT = require('libp2p-kad-dht')
@@ -99,4 +99,4 @@ const createBootstrapNode = (peerId, listenAddrs) => {
 }
 
 
-export {createNode, createBootstrapNode, SignalingServer, PeerId};
+export {createNode, createBootstrapNode, SignalingServer, PeerId, PubsubChat};
