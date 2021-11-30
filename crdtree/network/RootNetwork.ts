@@ -1,4 +1,6 @@
 import {CRDTreeTransport} from "../src/API";
+import { CRDTree } from "../src/CRDTree";
+import {ICRDTree} from "../src/API";
 import * as p2p from "./P2P";
 const idJSON = require('./id.json')
 
@@ -14,6 +16,10 @@ export interface INetwork<T = any> {
 	createBootstrapNode(): Promise<boolean>;
 
 	get_connected_roots(): ipv4addr[];
+
+	encode(crdt: ICRDTree): string;
+
+	decode(msg: string): CRDTree;
 
 	// called by CRDTree to propagate to other processes
 	send(update: CRDTreeTransport<T>): void;
@@ -34,11 +40,18 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		// after establishing the socket, replies back all known nodes
 		// may learn about new nodes from connecting node
 	}
+	encode(crdt: ICRDTree): string{
+		return JSON.stringify(crdt.serialize());
+	}
+
+	decode(changes: string): any{
+		return JSON.parse(changes);
+	}
 
 
 	get_connected_roots(): ipv4addr[]{
 		return;
-	};
+	}
 
 	connect(addr:string): Promise<boolean>{
 		;(async () => {

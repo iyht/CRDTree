@@ -7,6 +7,7 @@ import {FrontendPrimitive} from "../src/Primitive";
 import {createNode} from "../network/P2P";
 import {readResource} from "./util/utils";
 import { doesNotMatch } from "assert";
+import {RootNetwork} from "../network/RootNetwork";
 
 describe("CRDTree", () => {
 
@@ -226,17 +227,17 @@ describe("CRDTree", () => {
 				crdtB = new CRDTree(crdtA.serialize(), "B");
 			});
 
-			it("merge with p2p pid", async (done) => {
-  				const [node1, node2] = await Promise.all([
-        				createNode(), 
-        				createNode(),
-  				])
-				crdtA = new CRDTree([], node1.peerId.toB58String());
-				crdtA.assign([], {});
-				crdtB = new CRDTree(crdtA.serialize(), node2.peerId.toB58String());
-				crdtA.merge(crdtB);
-				expect(crdtA).to.render({});
-			});
+			// it("merge with p2p pid", async (done) => {
+  			// 	const [node1, node2] = await Promise.all([
+        	// 			createNode(), 
+        	// 			createNode(),
+  			// 	])
+			// 	crdtA = new CRDTree([], node1.peerId.toB58String());
+			// 	crdtA.assign([], {});
+			// 	crdtB = new CRDTree(crdtA.serialize(), node2.peerId.toB58String());
+			// 	crdtA.merge(crdtB);
+			// 	expect(crdtA).to.render({});
+			// });
 
 			it("should be able to merge into self as a no-op", () => {
 				crdtA.merge(crdtA);

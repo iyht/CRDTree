@@ -7,6 +7,12 @@ chai.Assertion.addMethod('render', function (expectedRender) {
 	new chai.Assertion(crdt.render()).to.deep.equal(expectedRender);
 });
 
+chai.Assertion.addMethod('renderOneOf', function (...expectedRender) {
+	const crdt: ICRDTree = this._obj;
+	new chai.Assertion(expectedRender).to.deep.include(crdt.render());
+});
+
+
 chai.Assertion.addMethod('renderEqual', function (remote: ICRDTree) {
 	const crdt: ICRDTree = this._obj;
 	new chai.Assertion(crdt.render()).to.deep.equal(remote.render());
@@ -36,6 +42,7 @@ declare global {
 	// eslint-disable-next-line @typescript-eslint/no-namespace
 	export namespace Chai {
 		interface Assertion {
+			renderOneOf: (...val: any[]) => Assertion;
 			render: (val: any) => Assertion;
 			renderEqual: (remote: ICRDTree) => Assertion;
 			merge: (remote: ICRDTree) => Assertion;
