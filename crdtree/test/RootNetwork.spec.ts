@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {Done} from "mocha";
 import {CRDTree} from "../src/CRDTree";
-import "./util/utils";
 import {ICRDTree} from "../src/API";
+import "./util/utils";
 import {FrontendPrimitive} from "../src/Primitive";
 import {createNode} from "../network/P2P";
 import {readResource} from "./util/utils";

@@ -11,7 +11,7 @@ export interface INetwork<T = any> {
 
 	// connect to an existing CRDTree network
 	// calls itself and may connect to other nodes it learns about from host
-	connect(addr: string) : Promise<boolean>;
+	connect(addr: string) : Promise<any>;
 
 	createBootstrapNode(): Promise<boolean>;
 
@@ -55,7 +55,7 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		return;
 	}
 
-	connect(addr:string): Promise<boolean>{
+	connect(addr:string): Promise<any>{
 		;(async () => {
 			const libp2p = await p2p.createNode(addr);
 			// libp2p.on('peer:discovery', (peerId) => console.log('Discovered:', peerId.toB58String()))
@@ -157,8 +157,20 @@ export class RootNetwork<T = any> implements INetwork<T> {
 	}
 
 	send(crdt: ICRDTree): void {
-		let msg: string = this.encode(crdt);
-		this.pubsubChat.send(msg);
+		;(async () => {
+			let msg: string = this.encode(crdt);
+			let buf: Buffer = Buffer.from(msg);
+			buf = buf.slice(0, -1)
+			// this.pubsubChat.send(msg);
+			if (this.pubsubChat.checkCommand(buf)) return
+
+			try {
+			  // Publish the message
+			  await this.pubsubChat.send(buf)
+			} catch (err) {
+			  console.error('Could not publish chat', err)
+			}
+		})();
 	}
 
 	onRecv(callback: <T>(update: CRDTreeTransport<T>) => void): void {
