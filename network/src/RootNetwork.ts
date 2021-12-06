@@ -1,5 +1,7 @@
 import {ICRDTree} from "crdtree";
 import * as p2p from "./P2P";
+import {CRDTreeTransport} from "../../crdtree";
+import {debounce} from "debounce";
 
 const idJSON = require('./id.json')
 
@@ -13,44 +15,58 @@ export interface INetwork<T = any> {
 
 	createBootstrapNode(): Promise<boolean>;
 
-	encode(crdt: ICRDTree): string;
+	assign(indices: Array<number | string>, item: any): void;
 
-	decode(msg: string): ICRDTree;
+	insert(indices: [...Array<number | string>, number], item: any): void;
 
-	// propagate to other processes
-	send(crdt: ICRDTree): void;
+	delete(indices: Array<number | string>): void;
+
+	render(): any;
 }
 
 export class RootNetwork<T = any> implements INetwork<T> {
-	pubsubChat = new p2p.PubsubChat();
-	crdt: ICRDTree;
+	private readonly pubsubChat = new p2p.PubsubChat();
+	private pendingUpdates: CRDTreeTransport<T>;
 	node: any;
 
 
-	constructor(crdt?: ICRDTree) {
-		if (crdt) this.crdt = crdt;
-
+	constructor(private readonly crdt: ICRDTree) {
+		this.pendingUpdates = [];
+		crdt.onUpdate((update) => {
+			this.pendingUpdates.push(...update);
+			this.broadcast()
+		});
 	}
 
-	encode(crdt: ICRDTree): string {
-		return JSON.stringify(crdt.serialize());
+	public assign(indices: Array<number | string>, item: any): void {
+		this.crdt.assign(indices, item);
 	}
 
-	decode(changes: string): any {
-		return JSON.parse(changes);
+	public insert(indices: [...Array<number | string>, number], item: any): void {
+		this.crdt.insert(indices, item);
+	}
+
+	public delete(indices: Array<number | string>): void {
+		this.crdt.delete(indices);
+	}
+
+	public render(): any {
+		return this.crdt.render();
 	}
 
 
 	get_connected_roots(): ipv4addr[] {
+		// TODO
 		return;
 	}
 
 	connect(addr: string): Promise<any> {
-		;(async () => {
+		(async () => {
 			this.node = await p2p.createNode(addr);
 			console.log(this.node.peerId.toB58String())
 
 			this.node.connectionManager.on('peer:connect', (connection) => {
+				// TODO request a complete history
 				console.info(`Connected to ${connection.remotePeer.toB58String()}!`)
 			})
 
@@ -67,7 +83,7 @@ export class RootNetwork<T = any> implements INetwork<T> {
 				}
 				console.log("received");
 				console.log(message.data);
-				this.crdt.merge(this.decode(message.data));
+				this.crdt.merge(JSON.parse(message.data));
 				//   console.info(`${fromMe ? p2p.PubsubChat.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}): ${message.data}`)
 			})
 		})();
@@ -128,19 +144,18 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		return;
 	}
 
-	send(crdt: ICRDTree): void {
-		(async () => {
-			let msg: string = this.encode(crdt);
-			console.log(msg);
-			let buf: Buffer = Buffer.from(msg);
-			if (this.pubsubChat.checkCommand(buf)) return
+	private readonly broadcast: () => void = debounce(async () => {
+		const updatesToBroadcast = this.pendingUpdates;
+		this.pendingUpdates = [];
 
-			try {
-				// Publish the message
-				await this.pubsubChat.send(buf)
-			} catch (err) {
-				console.error('Could not publish chat', err)
-			}
-		})();
-	}
+		try {
+			// Publish the message
+			const message = JSON.stringify(updatesToBroadcast);
+			const buffer = Buffer.from(message);
+			await this.pubsubChat.send(buffer)
+		} catch (err) {
+			this.pendingUpdates.push(...updatesToBroadcast);
+			console.error('Could not publish chat', err)
+		}
+	}, 200);
 }
