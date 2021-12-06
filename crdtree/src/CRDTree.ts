@@ -1,7 +1,7 @@
 import State from "./State";
 import {CRDTreeTransport, ICRDTree, ID, Index} from "./API";
 import {ROOT} from "./Constants";
-import {BackendChange, Change} from "./Change";
+import {BackendChange, Change, FrontendChange} from "./Change";
 import {ActionKind, FrontendAction} from "./Action";
 import {FrontendPrimitive} from "./Primitive";
 import {assertSerializable} from "./Util";
@@ -18,18 +18,20 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.state = new State<T>(from);
 	}
 
-	private makeChange(action: FrontendAction): void {
-		const backendChanges = this.insertChanges([{
-			action: action,
+	private makeChange(change: { action: FrontendAction } | FrontendChange): void {
+		this.insertChanges([{
 			clock: this.state.next(),
 			pid: this.pid,
+			branch: this.state.ref(),
+			dep: this.state.latest(),
+			...change,
 		}]);
-		this.callbacks.forEach((callback) =>
-			setImmediate(callback, backendChanges));
 	}
 
-	private insertChanges(changes: Change[]): BackendChange[] {
-		return this.state.addChange(changes);
+	private insertChanges(changes: Change[]): void {
+		const backendChanges = this.state.addChanges(changes);
+		this.callbacks.forEach((callback) =>
+			setImmediate(callback, backendChanges));
 	}
 
 	private getElement(indices: Index[]): ID {
@@ -45,17 +47,21 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		const last = indices[indices.length - 1] ?? (ROOT as Index);
 		if (typeof last === "string") {
 			this.makeChange({
-				at: last,
-				in: this.getParentElement(indices),
-				item,
-				kind: ActionKind.ASSIGN,
+				action: {
+					at: last,
+					in: this.getParentElement(indices),
+					item,
+					kind: ActionKind.ASSIGN,
+				}
 			});
 		} else {
 			this.makeChange({
-				at: this.getElement(indices),
-				in: this.getParentElement(indices),
-				item,
-				kind: ActionKind.ASSIGN_LIST,
+				action: {
+					at: this.getElement(indices),
+					in: this.getParentElement(indices),
+					item,
+					kind: ActionKind.ASSIGN_LIST,
+				}
 			});
 		}
 	}
@@ -64,24 +70,30 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		assertSerializable(item);
 		const last: number = indices[indices.length - 1] as number;
 		this.makeChange({
-			after: this.getElement([...indices.slice(0, -1), last - 1]),
-			in: this.getParentElement(indices),
-			item,
-			kind: ActionKind.INSERT,
+			action: {
+				after: this.getElement([...indices.slice(0, -1), last - 1]),
+				in: this.getParentElement(indices),
+				item,
+				kind: ActionKind.INSERT,
+			}
 		});
 	}
 
 	public delete(indices: Index[]): void {
 		this.makeChange({
-			in: this.getParentElement(indices),
-			at: this.getElement(indices),
-			kind: ActionKind.DELETE,
+			action: {
+				in: this.getParentElement(indices),
+				at: this.getElement(indices),
+				kind: ActionKind.DELETE,
+			}
 		});
 	}
 
 	public noop(): void {
 		this.makeChange({
-			kind: ActionKind.NOOP,
+			action: {
+				kind: ActionKind.NOOP,
+			}
 		});
 	}
 
@@ -97,31 +109,54 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.callbacks.push(callback);
 	}
 
-	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): ID[] {
+	public fork(): string {
+		const from = this.state.ref();
+		const clock = this.state.next();
+		const dep = this.state.latest();
+		const branch = uuid();
+		const {pid} = this;
+		this.state.checkout(branch); // VERY EXPENSIVE/WASTEFUL reapplication here lol
+		this.makeChange({
+			action: {
+				kind: ActionKind.FORK,
+				from,
+				after: dep,
+			},
+			clock,
+			pid,
+			branch,
+			dep,
+		});
+		return branch;
+	}
+
+	public join(ref: string): void {
+		this.makeChange({
+			action: {
+				kind: ActionKind.JOIN,
+				from: ref,
+				after: this.state.latest(ref),
+			}
+		});
+	}
+
+	public ref(): string {
+		return this.state.ref();
+	}
+
+	public merge(remote: CRDTree<T> | CRDTreeTransport<T>): string[] {
 		const changes = remote instanceof CRDTree ? remote.serialize() : remote;
 		this.insertChanges(changes);
 
 		// ================ BENEATH HERE IS STUFF I DON'T WANT TO DEAL WITH YET =======================================
-		return [];
+		return []; // TODO
 	}
 
-	public fork(): ID {
-		return undefined;
+	public listRefs(): string[] {
+		return this.state.listRefs();
 	}
 
-	public join(ref: ID): void {
-		return;
-	}
-
-	public listRefs(): ID[] {
-		return [];
-	}
-
-	public ref(): ID {
-		return undefined;
-	}
-
-	public checkout(ref: ID): void {
-		return;
+	public checkout(ref: string): void {
+		this.state.checkout(ref);
 	}
 }

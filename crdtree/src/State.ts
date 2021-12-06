@@ -1,6 +1,6 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, changeLt, changeSortCompare, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
 	BackendInsertion,
@@ -9,26 +9,108 @@ import {
 	isBackendAssignment,
 	isBackendInsertion,
 	isBackendListAssignment,
-	isDeletion
+	isDeletion, isFork, isJoin
 } from "./Action";
 import {BackendPrimitive, ObjectKind} from "./Primitive";
 import {Entry, MetaMap, MetaObject} from "./StateObject";
 import {assignToList, findIndexInTombstoneArray, findInsertionIndex, insertInList} from "./ArrayUtils";
+import {render} from "./Renderer";
+import {ensureNumber} from "./Util";
+import {nameLt} from "./Clock";
 
 export default class State<T = any> {
 	private objects: MetaMap;
 	private _seen: Set<ID>;
+	private _ref: string;
 	private clock: number;
+	private stored: BackendChange[];
+	private readonly branches: Map<string, Map<ID, BackendChange>>;
 
-	constructor(private readonly changes: BackendChange[]) {
-		this.clock = changes[changes.length - 1]?.clock ?? 0;
+	constructor(changes: BackendChange[]) {
+		this._ref = ROOT;
+		this.branches = new Map();
 		this._seen = new Set<ID>();
-		this.witness(this.changes);
-		this.reapplyAllChanges();
+		this.clock = 0;
+		this.stored = [];
+		this.reinitObjects();
+		this.addChanges(changes);
 	}
 
-	private seen(change: Change): boolean {
-		return this._seen.has(toID(change));
+	public addChanges(changes: Change[]): BackendChange[] {
+		const backendChanges = changes.map(ensureBackendChange);
+		const newToThisNode = this.addChangesToBranches(backendChanges);
+		const branch = this.collect();
+		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
+		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
+			this.updateClock(branch); // Has to be in branch bc clock is checked above in predicate
+			this.applyChanges(newToCurrentBranch);
+		} else if (newToCurrentBranch.length > 0) {
+			this.updateClock(branch);
+			this.reapply(branch);
+		}
+		return newToThisNode;
+	}
+
+	private updateClock(changes: Change[]): void {
+		this.clock = changes[changes.length - 1].clock;
+	}
+
+	private addChangesToBranches(changes: BackendChange[]): BackendChange[] {
+		return changes.filter((change) => {
+			const {branch} = change;
+			if (!this.branches.has(branch)) {
+				this.branches.set(branch, new Map<ID, BackendChange>());
+			}
+			const incomingID = toID(change);
+			if (!this.branches.get(branch).has(incomingID)) {
+				this.branches.get(branch).set(incomingID, change);
+				return true;
+			} else {
+				return false;
+			}
+		});
+	}
+
+	private collect(ref?: string): BackendChange[] {
+		const changes = this.collectImpl(ref ?? this.ref());
+		const listChanges = Array.from(changes.values());
+		return listChanges.sort(changeSortCompare);
+	}
+
+	private collectImpl(ref: string, after?: ID): Map<ID, BackendChange> {
+		const changes = this.branches.get(ref) ?? new Map<ID, BackendChange>();
+		const relevantChanges = Array.from(changes.values()).filter((change) => {
+			if (!after) {
+				return true;
+			}
+			const changeID = toID(change);
+			return changeID === after || nameLt(toID(change), after)
+		});
+		const backendChangeOutput = new Map<ID, BackendChange>();
+		relevantChanges.forEach((change) => {
+			const {action} = change;
+			if (isFork(action) || isJoin(action)) {
+				const recurrence = this.collectImpl(action.from, action.after);
+				recurrence.forEach((value, key) =>
+					backendChangeOutput.set(key, value));
+			}
+			backendChangeOutput.set(toID(change), change);
+		});
+		return backendChangeOutput;
+	}
+
+	public checkout(ref: string): void {
+		this._ref = ref;
+		this._seen = new Set();
+		this.clock = 0;
+		this.stored = [];
+		const branch = this.collect();
+		this.reapply(branch);
+	}
+
+	private seen(change: Change | ID): boolean {
+		const id: ID = typeof change === "string" ? change : toID(change);
+		return this._seen.has(id);
 	}
 
 	private witness(changes: Change[]): void {
@@ -38,6 +120,16 @@ export default class State<T = any> {
 
 	public next(): number {
 		return this.clock + 1;
+	}
+
+	public latest(ref?: string): ID | undefined {
+		ref ??= this.ref();
+		const branch = this.collect(ref);
+		if (branch.length > 0) {
+			return toID(branch[branch.length - 1]);
+		} else {
+			return undefined;
+		}
 	}
 
 	public getElement(indices: Index[]): ID {
@@ -57,58 +149,39 @@ export default class State<T = any> {
 			if (metaObject instanceof Map) {
 				entry = metaObject.get(index);
 			} else {
-				entry = metaObject[findIndexInTombstoneArray(metaObject, State.ensureNumber(index))];
+				entry = metaObject[findIndexInTombstoneArray(metaObject, ensureNumber(index))];
 			}
 			return entry?.deleted ? undefined :
 				entry?.kind === ObjectKind.OTHER ? entry?.name : (entry?.value as ID);
 		}, ROOT_PARENT) as ID;
 	}
 
-	private static ensureNumber(maybeNumber: any): number {
-		if (typeof maybeNumber !== "number" || !isFinite(maybeNumber)) {
-			throw new RangeError("Must use numbers to index into arrays");
-		}
-		return maybeNumber; // definitely number
+	private reapply(changes: BackendChange[]): void {
+		this.reinitObjects();
+		this.applyChanges(changes);
 	}
 
-	public addChange(changes: Change[]): BackendChange[] {
-		const backendChanges = changes
-			.filter((change) => !this.seen(change))
-			.map(ensureBackendChange)
-			.sort(changeSortCompare);
-		this.witness(backendChanges);
-		if (backendChanges.length > 0 && backendChanges[0].clock > this.clock) {
-			this.appendChanges(backendChanges);
-			this.applyChanges(backendChanges);
-		} else if (backendChanges.length > 0) {
-			this.insertChanges(backendChanges);
-			this.reapplyAllChanges();
-		}
-		return backendChanges;
-	}
-
-	private appendChanges(changes: BackendChange[]): void {
-		this.clock = changes[changes.length - 1].clock;
-		this.changes.push(...changes);
-	}
-
-	private insertChanges(changes: BackendChange[]): void {
-		this.changes.push(...changes);
-		this.changes.sort(changeSortCompare);
-	}
-
-	private reapplyAllChanges(): void {
+	private reinitObjects(): void {
 		const root = {name: undefined, kind: ObjectKind.OTHER, value: undefined, deleted: true};
 		const rootParent = new Map<Index, Entry>().set(ROOT, root);
 		this.objects = new Map<ID, Map<Index, Entry>>().set(ROOT_PARENT, rootParent);
-		this.applyChanges(this.changes);
 	}
 
 	private applyChanges(changes: BackendChange[]): void {
-		changes.forEach((change: BackendChange) => this.applyChange(change));
+		const groupedChanges = changes.partition((change: BackendChange) => {
+			if (!change.dep || this.seen(change.dep)) {
+				this.witness([change]);
+				return true;
+			} else {
+				return false;
+			}
+		});
+		const changesToApply = groupedChanges.get(true) ?? [];
+		changesToApply.forEach((change: BackendChange) => this.applyChange(change));
 	}
 
 	private applyChange(change: BackendChange): void {
+		this.clock = change.clock;
 		const {action} = change;
 		if (isBackendAssignment(action)) {
 			this.applyAssignment(action);
@@ -189,40 +262,22 @@ export default class State<T = any> {
 	}
 
 	public listChanges(): BackendChange[] {
-		return this.changes.slice();
+		const changes = [];
+		for (const branch of this.branches.values()) {
+			changes.push(...branch.values());
+		}
+		return changes;
 	}
 
 	public render(): T {
-		const metaObject = this.getMetaObject(ROOT_PARENT) as Map<Index, Entry>;
-		if (metaObject.get(ROOT).deleted) {
-			return undefined;
-		} else {
-			return this.renderRecursiveMap(metaObject)[ROOT];
-		}
+		return render(this.objects);
 	}
 
-	private renderRecursiveMap(metaObject: Map<Index, Entry>): any {
-		return Array.from(metaObject.entries()).reduce((element: any, [index, entry]): any => {
-			if (entry.deleted === false) {
-				element[index] = this.renderRecursive(entry);
-			}
-			return element;
-		}, {});
+	public ref(): string {
+		return this._ref;
 	}
 
-	private renderRecursiveList(metaObject: Array<Entry>): any {
-		return metaObject.filter((entry) => entry.deleted === false)
-			.map((entry) => this.renderRecursive(entry));
-	}
-
-	private renderRecursive(entry: Entry): any {
-		const {value, kind} = entry;
-		if (kind !== ObjectKind.OTHER) {
-			const metaObject = this.getMetaObject(value as ID);
-			return Array.isArray(metaObject) ?
-				this.renderRecursiveList(metaObject) : this.renderRecursiveMap(metaObject);
-		} else {
-			return value;
-		}
+	public listRefs(): string[] {
+		return Array.from(this.branches.keys());
 	}
 }

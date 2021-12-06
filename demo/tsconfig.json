@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"outDir": "dist",
-		"allowJs": true,
+		"allowJs": false,
 		"allowSyntheticDefaultImports": true,
 		"downlevelIteration": true,
 		"esModuleInterop": true,
@@ -27,10 +27,6 @@
 			"node"
 		]
 	},
-	"include": [
-		"src",
-		"test"
-, "network/RootNetwork.ts"	],
 	"exclude": [
 		"node_modules"
 	]

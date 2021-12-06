@@ -4,10 +4,7 @@ import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
 import {ICRDTree} from "../src/API";
 import {FrontendPrimitive} from "../src/Primitive";
-import {createNode} from "../network/P2P";
 import {readResource} from "./util/utils";
-import { doesNotMatch } from "assert";
-import {RootNetwork} from "../network/RootNetwork";
 
 describe("CRDTree", () => {
 
@@ -226,18 +223,6 @@ describe("CRDTree", () => {
 				crdtA.assign([], {});
 				crdtB = new CRDTree(crdtA.serialize(), "B");
 			});
-
-			// it("merge with p2p pid", async (done) => {
-  			// 	const [node1, node2] = await Promise.all([
-        	// 			createNode(), 
-        	// 			createNode(),
-  			// 	])
-			// 	crdtA = new CRDTree([], node1.peerId.toB58String());
-			// 	crdtA.assign([], {});
-			// 	crdtB = new CRDTree(crdtA.serialize(), node2.peerId.toB58String());
-			// 	crdtA.merge(crdtB);
-			// 	expect(crdtA).to.render({});
-			// });
 
 			it("should be able to merge into self as a no-op", () => {
 				crdtA.merge(crdtA);
@@ -498,6 +483,24 @@ describe("CRDTree", () => {
 				});
 			});
 
+			describe("Message loss/Out of order delivery", () => {
+
+				it("should render once everything is delivered even if out of order", async () => {
+					const updates = [];
+					crdtA.onUpdate((update) => updates.push(...update));
+					crdtA.assign(["foo"], {});
+					crdtA.assign(["foo", "foo"], "bar");
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(crdtA).to.render({foo: {foo: "bar"}});
+					expect(crdtB).to.render({});
+					expect(updates).to.have.length(2);
+					crdtB.merge([updates.pop()]);
+					crdtB.merge([updates.pop()]);
+					expect(crdtB).to.render({foo: {foo: "bar"}});
+				});
+			});
+
 			describe("CRD JSON T paper examples", () => {
 				it("should handle concurrent assignment (fig.1)", () => {
 					crdtA.assign(["key"], "A");
@@ -604,33 +607,33 @@ describe("CRDTree", () => {
 			});
 		});
 
-		// describe("stress test", () => {
-		// 	const text = readResource("text.txt");
-		// 	const characters = text.split("");
-		// 	const reversedCharacters = characters.slice().reverse();
+		xdescribe("stress test", () => {
+			const text = readResource("text.txt");
+			const characters = text.split("");
+			const reversedCharacters = characters.slice().reverse();
 
-		// 	const insertReversedCharsAt = (tree: CRDTree, at: number) =>
-		// 		reversedCharacters.forEach((char) =>
-		// 			tree.insert([at], char));
+			const insertReversedCharsAt = (tree: CRDTree, at: number) =>
+				reversedCharacters.forEach((char) =>
+					tree.insert([at], char));
 
-		// 	const insertInOrderCharsAt = (tree: CRDTree, at: number) =>
-		// 		characters.forEach((char, index) =>
-		// 			tree.insert([index + at], char));
+			const insertInOrderCharsAt = (tree: CRDTree, at: number) =>
+				characters.forEach((char, index) =>
+					tree.insert([index + at], char));
 
-		// 	it(`should perform reasonably with many insertions ((2 * ${characters.length}) + 1)`, function () {
-		// 		this.timeout(1000);
-		// 		const crdtA = new CRDTree([], "A");
-		// 		crdtA.assign([], []);
-		// 		crdtA.insert([0], "@");
-		// 		const crdtB = new CRDTree(crdtA.serialize(), "B");
+			it(`should perform reasonably with many insertions ((2 * ${characters.length}) + 1)`, function () {
+				this.timeout(1000);
+				const crdtA = new CRDTree([], "A");
+				crdtA.assign([], []);
+				crdtA.insert([0], "@");
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
 
-		// 		insertReversedCharsAt(crdtA, 0);
-		// 		insertInOrderCharsAt(crdtB, 1);
+				insertReversedCharsAt(crdtA, 0);
+				insertInOrderCharsAt(crdtB, 1);
 
-		// 		expect(crdtA).to.merge(crdtB);
-		// 		expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
-		// 	});
-		// });
+				expect(crdtA).to.merge(crdtB);
+				expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
+			});
+		});
 	});
 
 	describe("CRDTree", () => {
@@ -651,6 +654,29 @@ describe("CRDTree", () => {
 				const ref = tree.fork();
 				expect(ref).to.exist;
 				expect(tree).to.be.on(ref);
+			});
+
+			it("should be able to fork multiple times", () => {
+				const forkA = tree.fork();
+				const forkB = tree.fork();
+				expect(tree).to.be.on(forkB);
+				expect(forkA).to.not.equal(forkB);
+			});
+
+			it("should be able to fork multiple times from the same place in time", () => {
+				const main = tree.ref();
+				tree.assign([], []);
+				const forkA = tree.fork();
+				tree.insert([0], 1);
+				tree.checkout(main);
+				const forkB = tree.fork();
+				tree.insert([0], 2);
+				expect(tree).to.be.on(forkB);
+				expect(forkA).to.not.equal(forkB);
+				tree.checkout(main);
+				tree.join(forkA);
+				tree.join(forkB);
+				expect(tree).asOneOf([1, 2], [2, 1]);
 			});
 
 			it("should preserve changes from before the fork", () => {
@@ -752,6 +778,15 @@ describe("CRDTree", () => {
 				treeB = new CRDTree(treeA.serialize());
 			});
 
+			it("should list fork created on another node", () => {
+				const main = treeA.ref();
+				const fork = treeA.fork();
+				treeB.merge(treeA);
+				expect(treeB.listRefs()).to.include(fork);
+				expect(treeA).to.be.on(fork);
+				expect(treeB).to.be.on(main);
+			});
+
 			it("should keep same merging behaviour even when on another branch", () => {
 				const feature = treeA.fork();
 				treeB.merge(treeA);
@@ -790,6 +825,107 @@ describe("CRDTree", () => {
 				treeB.checkout(feature);
 				expect(treeB).to.render(undefined);
 				expect(treeA).to.merge(treeB).as({});
+			});
+
+			describe("Message loss/Out of order delivery for forks and joins", () => {
+
+				it("should render branches properly once everything is delivered even if out of order", async () => {
+					const updates = [];
+					treeA.onUpdate((update) => updates.push(...update));
+					const fork = treeA.fork();
+					treeA.assign(["foo"], {});
+					treeA.assign(["foo", "foo"], "bar");
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(treeA).to.render({foo: {foo: "bar"}});
+					expect(treeB).to.render({});
+
+					expect(updates).to.have.length(3);
+
+					treeB.merge([updates.pop()]);
+					treeB.merge([updates.pop()]);
+					treeB.merge([updates.pop()]);
+
+					expect(treeB.listRefs()).to.include(fork);
+					expect(treeB).to.render({});
+					treeB.checkout(fork);
+					expect(treeB).to.render({foo: {foo: "bar"}});
+				});
+
+				it("should keep the correct dependencies across forks", async () => {
+					// setup
+					const updates = [];
+					const main = treeA.ref();
+					treeA.onUpdate((update) => updates.push(...update));
+
+					treeA.assign(["foo"], {}); // On main branch
+					expect(treeA).to.render({foo: {}});
+
+					const fork = treeA.fork(); // check out a feature branch
+					treeA.assign(["foo", "foo"], "bar"); // create nested item "bar"
+
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(treeA).to.render({foo: {foo: "bar"}}); // on fork
+					expect(treeB).to.render({}); // still on main branch
+
+					expect(updates).to.have.length(3);
+
+					treeB.merge([updates.pop()]); // treeA.assign(["foo", "foo"], "bar");
+					expect(treeB.listRefs()).to.include(fork);
+					treeB.checkout(fork);
+					expect(treeB).to.render(undefined); // don't know what's on the fork yet, just that it exists
+					treeB.merge([updates.pop()]); // treeA.fork();
+					expect(treeB).to.render({}); // just discovered where we are forking from
+					treeB.merge([updates.pop()]); // treeA.assign(["foo"], {});
+
+					expect(treeB).to.render({foo: {foo: "bar"}});
+					treeB.checkout(main);
+					expect(treeB).to.render({foo: {}});
+				});
+
+				it("should call callback functions when merging in from another tree", async () => {
+					const updates = [];
+					treeB.onUpdate((update) => updates.push(...update));
+					const fork = treeA.fork();
+					treeA.assign(["foo"], {});
+					treeA.assign(["foo", "foo"], "bar");
+					expect(treeA).to.render({foo: {foo: "bar"}});
+					expect(treeB).to.render({});
+
+					treeB.merge(treeA);
+
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(updates).to.have.length(3);
+
+					expect(treeB.listRefs()).to.include(fork);
+					expect(treeB).to.render({});
+					treeB.checkout(fork);
+					expect(treeB).to.render({foo: {foo: "bar"}});
+				});
+
+				it("should call back registered functions only once when merging the same change multiple times", async () => {
+					const updates = [];
+					treeB.onUpdate((update) => updates.push(...update));
+					const fork = treeA.fork();
+					treeA.assign(["foo"], {});
+					treeA.assign(["foo", "foo"], "bar");
+					const treeAChanges = treeA.serialize();
+					expect(treeA).to.render({foo: {foo: "bar"}});
+					expect(treeB).to.render({});
+					treeB.merge(treeAChanges);
+					treeB.merge(treeAChanges);
+
+					expect(treeB.listRefs()).to.include(fork);
+					expect(treeB).to.render({});
+					treeB.checkout(fork);
+					expect(treeB).to.render({foo: {foo: "bar"}});
+
+					// enforce that callback gets executed
+					await new Promise((resolve) => setImmediate(resolve));
+					expect(updates).to.have.length(3);
+				});
 			});
 		});
 	});

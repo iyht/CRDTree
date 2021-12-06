@@ -1,7 +1,7 @@
 {
 	"name": "crdtree",
 	"version": "1.0.0",
-	"main": "index.js",
+	"main": "dist/src/index.js",
 	"repository": "https://github.com/Haotian-Yang/CPSC538B-Project",
 	"license": "MIT",
 	"devDependencies": {
