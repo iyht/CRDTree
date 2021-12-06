@@ -1,24 +1,26 @@
 import {RootNetwork} from "../../src/RootNetwork";
 import {CRDTree} from "crdtree";
 
-let rn: RootNetwork;
-rn = new RootNetwork(new CRDTree([], "A"));
-rn.connect('/ip4/127.0.0.1/tcp/63785/ipfs/QmWGDfzPyfuYy9u71EJFvUe3wzgLJp9NwGvYrj2WnCA1sM');
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+(async () => {
+	const rnA = new RootNetwork(new CRDTree([], "A"));
+	await rnA.connect('/ip4/127.0.0.1/tcp/63785/ipfs/QmWGDfzPyfuYy9u71EJFvUe3wzgLJp9NwGvYrj2WnCA1sM');
 
-let rn1: RootNetwork;
-rn1 = new RootNetwork(new CRDTree([], "B"));
-rn1.connect('/ip4/127.0.0.1/tcp/63785/ipfs/QmWGDfzPyfuYy9u71EJFvUe3wzgLJp9NwGvYrj2WnCA1sM');
+	const rnB = new RootNetwork(new CRDTree([], "B"));
+	await rnB.connect('/ip4/127.0.0.1/tcp/63785/ipfs/QmWGDfzPyfuYy9u71EJFvUe3wzgLJp9NwGvYrj2WnCA1sM');
 
-rn.assign([], {});
-rn.assign(["foo"], 69);
+	await sleep(5000);
 
-setTimeout(function () {
-	// rn.disconnect();
-	// rn1.disconnect();
-	console.log(rn.render());
-	console.log(rn1.render());
-}, 10000);
+	rnA.assign([], {});
+	rnA.assign(["foo"], 69);
+
+	await sleep(5000);
+
+	console.log(rnA.render());
+	console.log(rnB.render());
+	process.exit(0);
+})();
 
 
 
