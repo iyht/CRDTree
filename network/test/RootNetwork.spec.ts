@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {CRDTree, ICRDTree} from "crdtree";
-import "./util/utils";
 import {RootNetwork} from "../src/RootNetwork";
 
 describe("RootNetwork", () => {
