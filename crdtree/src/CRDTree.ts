@@ -10,7 +10,7 @@ import {uuid} from "./UUID";
 export class CRDTree<T = any> implements ICRDTree<T> {
 	private readonly callbacks: Array<(update: CRDTreeTransport<T>) => void>;
 	private readonly state: State<T>;
-	private pid: string;
+	private readonly pid: string;
 
 	constructor(from: CRDTreeTransport<T> = [], pid?: string) {
 		this.callbacks = [];
@@ -38,14 +38,6 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	private getParentElement(indices: Index[]): ID {
 		return this.state.getParentElement(indices);
-	}
-
-	public getPid(): string{
-		return this.pid;
-	}
-
-	public assignPid(pid: string): void{
-		this.pid = pid;
 	}
 
 	public assign<U extends FrontendPrimitive = any>(indices: Index[], item: U): void {

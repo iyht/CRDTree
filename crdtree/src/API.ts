@@ -29,9 +29,6 @@ export interface ICRDTree<T = any> {
 
 	fork(): ID;
 
-	getPid(): string;
-	assignPid(pid: string): void
-
 	join(ref: ID): void; // same fork is a no-op
 	checkout(ref: ID): void;
 }
