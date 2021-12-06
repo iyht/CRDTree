@@ -1,9 +1,8 @@
 {
 	"compilerOptions": {
 		"outDir": "dist",
-		"allowJs": true,
+		"allowJs": false,
 		"allowSyntheticDefaultImports": true,
-		"declaration": true,
 		"downlevelIteration": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
@@ -28,10 +27,6 @@
 			"node"
 		]
 	},
-	"include": [
-		"src",
-		"test"
-	],
 	"exclude": [
 		"node_modules"
 	]

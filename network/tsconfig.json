@@ -25,7 +25,8 @@
 			"es2019"
 		],
 		"types": [
-			"node"
+			"node",
+			"mocha"
 		]
 	},
 	"include": [
