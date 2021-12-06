@@ -1,5 +1,5 @@
 const Libp2p = require('libp2p')
-// dependency for transport 
+// dependency for transport
 const TCP = require('libp2p-tcp') // allow us talk to other server nodes
 const Websockets = require('libp2p-websockets') // allow us to talk to bootstrap nodes(contains SSL)
 const WebRTCStar = require('libp2p-webrtc-star') // talk over browsers
@@ -10,7 +10,7 @@ const MulticastDNS = require('libp2p-mdns')
 const WebrtcStar = require('libp2p-webrtc-star')
 const SignalingServer = require('libp2p-webrtc-star/src/sig-server')
 const PeerId = require('peer-id')
-const PubsubChat = require('./chat')
+const PubsubChat = require('../ext/chat')
 
 // peer discover
 const KademliaDHT = require('libp2p-kad-dht')
