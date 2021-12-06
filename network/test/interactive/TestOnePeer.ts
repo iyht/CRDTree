@@ -1,4 +1,4 @@
-import {RootNetwork} from "./RootNetwork";
+import {RootNetwork} from "../../src/RootNetwork";
 
 let rn: RootNetwork;
 rn = new RootNetwork();

@@ -1,4 +1,4 @@
-import {RootNetwork} from "./RootNetwork";
+import {RootNetwork} from "../../src/RootNetwork";
 import {ICRDTree, CRDTree} from "crdtree";
 
 let crdtA: ICRDTree;

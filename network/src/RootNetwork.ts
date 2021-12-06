@@ -75,7 +75,7 @@ export class RootNetwork<T = any> implements INetwork<T> {
 	}
 
 	createBootstrapNode(): Promise<boolean> {
-		;(async () => {
+		(async () => {
 			const peerId = await p2p.PeerId.createFromJSON(idJSON)
 
 			// Wildcard listen on TCP and Websocket

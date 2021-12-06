@@ -3,6 +3,7 @@
 		"outDir": "dist",
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
+		"declaration": true,
 		"downlevelIteration": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
