@@ -4,7 +4,7 @@ const textarea = document.querySelector('textarea');
 const input = document.querySelector('input');
 input.placeholder = `Say something, ${name}`;
 
-const webSocket = new WebSocket(`wss://${location.host}`);
+const webSocket = new WebSocket(`ws://${location.host}`);
 
 webSocket.addEventListener('open', function(e) {
 	// When we receive a message from the server,
