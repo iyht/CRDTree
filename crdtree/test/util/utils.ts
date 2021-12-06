@@ -1,5 +1,5 @@
 import * as chai from "chai";
-import {ICRDTree, ID} from "../../src/API";
+import {ICRDTree} from "../../src/API";
 import * as fs from "fs";
 
 chai.Assertion.addMethod('render', function (expectedRender) {

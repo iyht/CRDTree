@@ -3,7 +3,6 @@
 		"outDir": "dist",
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
-		"declaration": true,
 		"downlevelIteration": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
@@ -25,7 +24,8 @@
 			"es2019"
 		],
 		"types": [
-			"node"
+			"node",
+			"mocha"
 		]
 	},
 	"include": [
