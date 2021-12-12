@@ -23,7 +23,6 @@ export default class State<T = any> {
 	private _seen: Set<ID>;
 	private _ref: string;
 	private clock: number;
-	private stored: BackendChange[];
 	private readonly branches: Map<string, Map<ID, BackendChange>>;
 
 	constructor(changes: BackendChange[]) {
@@ -31,14 +30,13 @@ export default class State<T = any> {
 		this.branches = new Map();
 		this._seen = new Set<ID>();
 		this.clock = 0;
-		this.stored = [];
 		this.reinitObjects();
 		this.addChanges(changes);
 	}
 
 	public addChanges(changes: Change[]): BackendChange[] {
-		const backendChanges = changes.map(ensureBackendChange);
-		const newToThisNode = this.addChangesToBranches(backendChanges);
+		changes.forEach(ensureBackendChange);
+		const newToThisNode = this.addChangesToBranches(changes as BackendChange[]);
 		const branch = this.collect();
 		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
 		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
@@ -103,7 +101,6 @@ export default class State<T = any> {
 		this._ref = ref;
 		this._seen = new Set();
 		this.clock = 0;
-		this.stored = [];
 		const branch = this.collect();
 		this.reapply(branch);
 	}

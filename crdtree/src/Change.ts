@@ -17,17 +17,15 @@ const toID = (change: Change): ID => {
 	return `${pid}@${branch}@${clock}` as ID;
 };
 
-const ensureBackendChange = (change: Change): BackendChange => {
+const ensureBackendChange = (change: Change): void => {
 	const {kind} = change.action;
 	if (kind === ActionKind.DELETE || kind === ActionKind.NOOP ||
 		kind === ActionKind.FORK || kind === ActionKind.JOIN ||
 		isBackendPrimitive(change.action.item)) {
-		return change as BackendChange;
+		// already a backend change
 	} else {
 		const name: ID = toID(change);
-		const item = toObjectPrimitive(name, change.action.item);
-		const action = {...change.action, item};
-		return {...change, action};
+		change.action.item = toObjectPrimitive(name, change.action.item);
 	}
 };
 
