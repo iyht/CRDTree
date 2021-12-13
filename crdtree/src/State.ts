@@ -23,7 +23,10 @@ export default class State<T = any> {
 	private _seen: Set<ID>;
 	private _ref: string;
 	private clock: number;
-	private readonly branches: Map<string, Map<ID, BackendChange>>;
+	private readonly branches: Map<string, {
+		stored: Map<ID, BackendChange>,
+		seen: Map<ID, BackendChange>
+	}>;
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
@@ -36,17 +39,34 @@ export default class State<T = any> {
 
 	public addChanges(changes: Change[]): BackendChange[] {
 		changes.forEach(ensureBackendChange);
-		const newToThisNode = this.addChangesToBranches(changes as BackendChange[]);
-		const branch = this.collect();
-		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
-		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
-			this.updateClock(branch); // Has to be in branch bc clock is checked above in predicate
-			this.applyChanges(newToCurrentBranch);
-		} else if (newToCurrentBranch.length > 0) {
-			this.updateClock(branch);
-			this.reapply(branch);
+		const addingToThisBranch = this.addChangesToBranches(changes as BackendChange[]);
+
+
+		// const branch = this.collect();
+		// const newToCurrentBranch = branch.filter((change) => !this.seen(change));
+		const newlyRelevantToThisBranch = this.newCollect(addingToThisBranch).sort(changeSortCompare);
+
+
+		if (newlyRelevantToThisBranch.length > 0 && newlyRelevantToThisBranch[0].clock > this.clock) {
+			this.updateClock(newlyRelevantToThisBranch); // Has to be in branch bc clock is checked above in predicate
+			this.applyChanges(newlyRelevantToThisBranch);
+		} else if (newlyRelevantToThisBranch.length > 0) {
+			// this.updateClock(newlyRelevantToThisBranch);
+			this.reapply(this.collect());
 		}
-		return newToThisNode;
+		return addingToThisBranch;
+	}
+
+	public newCollect(changes: BackendChange[]): BackendChange[] {
+		return changes.flatMap((change: BackendChange): BackendChange | BackendChange[] => {
+			const {action} = change;
+			if (isFork(action) || isJoin(action)) {
+				const recurrence = this.collectImpl(action.from, action.after);
+				return [change, ...recurrence.values()].filter((change) => !this.seen(change));
+			} else {
+				return change;
+			}
+		});
 	}
 
 	private updateClock(changes: Change[]): void {
@@ -54,19 +74,17 @@ export default class State<T = any> {
 	}
 
 	private addChangesToBranches(changes: BackendChange[]): BackendChange[] {
-		return changes.filter((change) => {
+		changes.forEach((change) => {
 			const {branch} = change;
 			if (!this.branches.has(branch)) {
-				this.branches.set(branch, new Map<ID, BackendChange>());
+				this.branches.set(branch, {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()});
 			}
 			const incomingID = toID(change);
-			if (!this.branches.get(branch).has(incomingID)) {
-				this.branches.get(branch).set(incomingID, change);
-				return true;
-			} else {
-				return false;
+			if (!this.branches.get(branch).stored.has(incomingID)) {
+				this.branches.get(branch).stored.set(incomingID, change);
 			}
 		});
+		return [...(this.branches.get(this.ref())?.stored?.values() ?? [])];
 	}
 
 	private collect(ref?: string): BackendChange[] {
@@ -76,8 +94,8 @@ export default class State<T = any> {
 	}
 
 	private collectImpl(ref: string, after?: ID): Map<ID, BackendChange> {
-		const changes = this.branches.get(ref) ?? new Map<ID, BackendChange>();
-		const relevantChanges = Array.from(changes.values()).filter((change) => {
+		const {stored, seen} = this.branches.get(ref) ?? {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()};
+		const relevantChanges = [...stored.values(), ...seen.values()].filter((change) => {
 			if (!after) {
 				return true;
 			}
@@ -99,20 +117,35 @@ export default class State<T = any> {
 
 	public checkout(ref: string): void {
 		this._ref = ref;
-		this._seen = new Set();
+		// this._seen = new Set();
+		this.branches.forEach(({seen, stored}) => {
+			seen.forEach((value, id) => {
+				stored.set(id, value);
+				seen.delete(id);
+			});
+		})
 		this.clock = 0;
 		const branch = this.collect();
 		this.reapply(branch);
 	}
 
 	private seen(change: Change | ID): boolean {
+		// const id: ID = typeof change === "string" ? change : toID(change);
+		// return this._seen.has(id);
+
 		const id: ID = typeof change === "string" ? change : toID(change);
-		return this._seen.has(id);
+		const branch = id.split("@")[1];
+		return this.branches.get(branch).seen.has(id);
 	}
 
-	private witness(changes: Change[]): void {
-		changes.map(toID)
-			.forEach((id: ID) => this._seen.add(id));
+	private witness(changes: BackendChange[]): void {
+		changes.forEach((change) => {
+			const {branch} = change;
+			const {stored, seen} = this.branches.get(branch);
+			const id = toID(change);
+			seen.set(id, change);
+			stored.delete(id);
+		});
 	}
 
 	public next(): number {
@@ -122,6 +155,7 @@ export default class State<T = any> {
 	public latest(ref?: string): ID | undefined {
 		ref ??= this.ref();
 		const branch = this.collect(ref);
+		// const branch = [...(this.branches.get(ref)?.seen.values() ?? [])].sort(changeSortCompare);
 		if (branch.length > 0) {
 			return toID(branch[branch.length - 1]);
 		} else {
@@ -260,8 +294,8 @@ export default class State<T = any> {
 
 	public listChanges(): BackendChange[] {
 		const changes = [];
-		for (const branch of this.branches.values()) {
-			changes.push(...branch.values());
+		for (const {stored, seen} of this.branches.values()) {
+			changes.push(...stored.values(), ...seen.values());
 		}
 		return changes;
 	}
