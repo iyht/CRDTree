@@ -6,5 +6,8 @@
 	"dependencies": {
 		"0x": "^4.11.0",
 		"crdtree": "file:../crdtree"
+	},
+	"scripts": {
+		"bench": "0x -o bin/microBenchmark.js"
 	}
 }

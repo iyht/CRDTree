@@ -27,7 +27,7 @@ export interface ICRDTree<T = any> {
 
 	listRefs(): string[];
 
-	fork(): string;
+	fork(name?: string): string;
 
 	join(ref: string): void; // same fork is a no-op
 	checkout(ref: string): void;

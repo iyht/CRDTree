@@ -1,6 +1,6 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeLt, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
 	BackendInsertion,
@@ -38,7 +38,10 @@ export default class State<T = any> {
 	}
 
 	public addChanges(changes: Change[]): BackendChange[] {
-		changes.forEach(ensureBackendChange);
+		// changes.forEach(ensureBackendChange);
+		for (const change of changes) {
+			ensureBackendChange(change);
+		}
 		const addingToThisBranch = this.addChangesToBranches(changes as BackendChange[]);
 
 
@@ -80,7 +83,7 @@ export default class State<T = any> {
 				this.branches.set(branch, {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()});
 			}
 			const incomingID = toID(change);
-			if (!this.branches.get(branch).stored.has(incomingID)) {
+			if (!this.branches.get(branch).stored.has(incomingID) && !this.branches.get(branch).seen.has(incomingID)) {
 				this.branches.get(branch).stored.set(incomingID, change);
 			}
 		});
@@ -154,13 +157,27 @@ export default class State<T = any> {
 
 	public latest(ref?: string): ID | undefined {
 		ref ??= this.ref();
-		const branch = this.collect(ref);
-		// const branch = [...(this.branches.get(ref)?.seen.values() ?? [])].sort(changeSortCompare);
-		if (branch.length > 0) {
-			return toID(branch[branch.length - 1]);
-		} else {
-			return undefined;
+		let last;
+		for (const change of this.branches.get(ref)?.seen?.values() ?? []) {
+			if (!last || changeLt(last, change)) {
+				last = change;
+			}
 		}
+		for (const change of this.branches.get(ref)?.stored?.values() ?? []) {
+			if (!last || changeLt(last, change)) {
+				last = change;
+			}
+		}
+		return last ? toID(last) : undefined;
+		// const branch = [
+		// 	...(this.branches.get(ref)?.seen?.values() ?? []),
+		// 	...(this.branches.get(ref)?.stored?.values() ?? [])
+		// ].sort(changeSortCompare);
+		// if (branch.length > 0) {
+		// 	return toID(branch[branch.length - 1]);
+		// } else {
+		// 	return undefined;
+		// }
 	}
 
 	public getElement(indices: Index[]): ID {

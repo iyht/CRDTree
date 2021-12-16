@@ -48,7 +48,7 @@ const merge = (count) => {
 
 const benchmark = async (name, proc) => {
 	let csv = `OP_COUNT,MS`;
-	for (let i = 0; i < 5000; ++i) {
+	for (let i = 0; i < 400; ++i) {
 		if (i % 100 === 0) {
 			console.log("Done", i);
 		}
@@ -62,10 +62,10 @@ const benchmark = async (name, proc) => {
 
 (async () => {
 	console.log("start benchmarking");
-	// await benchmark("in order", arrayInOrder);
-	// await benchmark("reverse", arrayReverse);
-	// await benchmark("map", map);
-	await benchmark("noop", noop);
+	await benchmark("in order2", arrayInOrder);
+	await benchmark("reverse2", arrayReverse);
+	await benchmark("map2", map);
+	// await benchmark("bench", noop);
 	// await benchmark("merge", merge);
 	process.exit(0);
 })();
