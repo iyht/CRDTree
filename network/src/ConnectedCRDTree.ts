@@ -1,20 +1,9 @@
-import {ICRDTree} from "crdtree";
-import * as p2p from "./P2P";
 import {CRDTreeTransport} from "../../crdtree";
+import Libp2p from "libp2p";
+import {ICRDTree} from "crdtree";
 import {debounce} from "debounce";
 
-const idJSON = require('./id.json')
-
-type ipv4addr = [number, string];
-
-export interface INetwork<T = any> {
-
-	// connect to an existing CRDTree network
-	// calls itself and may connect to other nodes it learns about from host
-	connect(addr: string): Promise<void>;
-
-	// why the hell is this part of this api?
-	createBootstrapNode(): Promise<void>;
+interface IConnectedCRDTree<T = any> {
 
 	assign(indices: Array<number | string>, item: any): void;
 
@@ -22,21 +11,22 @@ export interface INetwork<T = any> {
 
 	delete(indices: Array<number | string>): void;
 
-	render(): any;
+	onUpdate(callback: (render: any) => void): void;
 }
 
-export class RootNetwork<T = any> implements INetwork<T> {
-	private readonly pubsubChat = new p2p.PubsubChat();
+class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	private pendingUpdates: CRDTreeTransport<T>;
-	node: any;
 
-
-	constructor(private readonly crdt: ICRDTree) {
+	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
-		crdt.onUpdate((update) => {
+		this.crdt.onUpdate((update) => {
 			this.pendingUpdates.push(...update);
 			this.broadcast();
 		});
+	}
+
+	public get id() {
+		return this.node.peerId;
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {
@@ -55,30 +45,8 @@ export class RootNetwork<T = any> implements INetwork<T> {
 		return this.crdt.render();
 	}
 
-
-	get_connected_roots(): ipv4addr[] {
+	onUpdate(callback: (render: any) => void): void {
 		// TODO
-		return;
-	}
-
-	public async connect(addr: string): Promise<any> {
-		this.node = await p2p.createNode(addr);
-		console.log(this.node.peerId.toB58String())
-
-		this.node.connectionManager.on('peer:connect', (connection) => {
-			// TODO request a complete history
-			console.info(`${this.node.peerId.toB58String()} connected to ${connection.remotePeer.toB58String()}!`);
-		});
-
-		// Start libp2p
-		await this.node.start();
-
-		// Create our PubsubChat client
-		this.pubsubChat.assign(this.node, p2p.PubsubChat.TOPIC, ({message}) => {
-			console.log("received");
-			console.log(message.data);
-			this.crdt.merge(JSON.parse(message.data));
-		});
 	}
 
 	async createBootstrapNode(): Promise<void> {
@@ -139,10 +107,12 @@ export class RootNetwork<T = any> implements INetwork<T> {
 			// Publish the message
 			const message = JSON.stringify(updatesToBroadcast);
 			const buffer = Buffer.from(message);
-			await this.pubsubChat.send(buffer)
+			await this.pubsubChat.send(buffer);
 		} catch (err) {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
 		}
 	}, 200);
 }
+
+export {IConnectedCRDTree, ConnectedCRDTree}
