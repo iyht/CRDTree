@@ -2,7 +2,10 @@ import {connectTo, initNetwork} from "../src/Network";
 import {expect} from "chai";
 import {IConnectedCRDTree} from "../src/ConnectedCRDTree";
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 describe("Network", function () {
+	this.timeout(10000);
 
 	let crdtA: IConnectedCRDTree;
 	let crdtB: IConnectedCRDTree;
@@ -28,6 +31,15 @@ describe("Network", function () {
 		it("should be able to join a network from non-originator node", async () => {
 			crdtC = await connectTo(crdtB.addresses);
 			expect(crdtC.addresses).to.not.be.empty;
+		});
+	});
+
+	describe("CRDT", () => {
+		it("should have changes move to other nodes", async () => {
+			crdtA.assign([], "foo");
+			expect(crdtA.render).to.deep.equal("foo");
+			await sleep(5000);
+			expect(crdtB.render).to.deep.equal("foo");
 		});
 	});
 });

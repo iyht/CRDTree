@@ -8,6 +8,7 @@ export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates a
 
 export interface ICRDTree<T = any> {
 	render: T;
+	ref: string;
 
 	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
 	// returns affected forks
@@ -22,8 +23,6 @@ export interface ICRDTree<T = any> {
 	noop(): void; // useful when we add commit messages
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
-
-	ref(): string;
 
 	listRefs(): string[];
 

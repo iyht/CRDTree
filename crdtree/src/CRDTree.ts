@@ -142,7 +142,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		});
 	}
 
-	public ref(): string {
+	public get ref(): string {
 		return this.state.ref();
 	}
 

@@ -2,6 +2,7 @@ import {CRDTreeTransport} from "../../crdtree";
 import Libp2p from "libp2p";
 import {ICRDTree} from "crdtree";
 import {debounce} from "debounce";
+import {PROTOCOL_PREFIX, send} from "./RecommendedProtocol";
 
 interface IConnectedCRDTree<T = any> extends ICRDTree {
 
@@ -67,7 +68,10 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			// Publish the message
 			const message = JSON.stringify(updatesToBroadcast);
 			const buffer = Buffer.from(message);
-			// await this.pubsubChat.send(buffer);
+			this.node.peerStore.peers.forEach((peer) => {
+				this.node.connectionManager.get(peer.id)?.newStream([PROTOCOL_PREFIX])
+					.then(({stream}) => send(buffer, stream));
+			});
 		} catch (err) {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
@@ -97,11 +101,11 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}
 
 	ref(): string {
-		return "";
+		return this.crdt.ref();
 	}
 
 	serialize(): CRDTreeTransport<any> {
-		return undefined;
+		return this.crdt.serialize();
 	}
 }
 

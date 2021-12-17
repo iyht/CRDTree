@@ -35,7 +35,7 @@ chai.Assertion.addMethod('asOneOf', function (...expectedRenders) {
 });
 
 chai.Assertion.addMethod('on', function (branch: string) {
-	new chai.Assertion(this._obj.ref()).to.deep.equal(branch);
+	new chai.Assertion(this._obj.ref).to.deep.equal(branch);
 });
 
 declare global {
