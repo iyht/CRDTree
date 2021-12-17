@@ -4,18 +4,18 @@ import * as fs from "fs";
 
 chai.Assertion.addMethod('render', function (expectedRender) {
 	const crdt: ICRDTree = this._obj;
-	new chai.Assertion(crdt.render()).to.deep.equal(expectedRender);
+	new chai.Assertion(crdt.render).to.deep.equal(expectedRender);
 });
 
 chai.Assertion.addMethod('renderOneOf', function (...expectedRender) {
 	const crdt: ICRDTree = this._obj;
-	new chai.Assertion(expectedRender).to.deep.include(crdt.render());
+	new chai.Assertion(expectedRender).to.deep.include(crdt.render);
 });
 
 
 chai.Assertion.addMethod('renderEqual', function (remote: ICRDTree) {
 	const crdt: ICRDTree = this._obj;
-	new chai.Assertion(crdt.render()).to.deep.equal(remote.render());
+	new chai.Assertion(crdt.render).to.deep.equal(remote.render);
 });
 
 chai.Assertion.addMethod('merge', function (remote: ICRDTree) {
@@ -31,11 +31,11 @@ chai.Assertion.addMethod('as', function (expectedRender) {
 });
 
 chai.Assertion.addMethod('asOneOf', function (...expectedRenders) {
-	new chai.Assertion(expectedRenders, "No valid render").to.deep.include(this._obj.render());
+	new chai.Assertion(expectedRenders, "No valid render").to.deep.include(this._obj.render);
 });
 
 chai.Assertion.addMethod('on', function (branch: string) {
-	new chai.Assertion(this._obj.ref()).to.deep.equal(branch);
+	new chai.Assertion(this._obj.ref).to.deep.equal(branch);
 });
 
 declare global {
