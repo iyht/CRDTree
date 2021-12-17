@@ -3,7 +3,6 @@ import {expect} from "chai";
 import {IConnectedCRDTree} from "../src/ConnectedCRDTree";
 
 describe("Network", function () {
-	this.timeout(10000);
 
 	let crdtA: IConnectedCRDTree;
 	let crdtB: IConnectedCRDTree;

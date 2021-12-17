@@ -4,6 +4,8 @@ import MPLEX from "libp2p-mplex";
 import {NOISE} from "libp2p-noise";
 import MulticastDNS from "libp2p-mdns";
 import Bootstrap from "libp2p-bootstrap";
+import PubsubPeerDiscovery from "libp2p-pubsub-peer-discovery";
+import createRelayServer from "libp2p-relay-server";
 
 const initNode = (): Promise<Libp2p> =>
 	Libp2p.create({
@@ -17,7 +19,16 @@ const initNode = (): Promise<Libp2p> =>
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: [], // MulticastDNS
+			peerDiscovery: [MulticastDNS], // MulticastDNS
+		},
+		config: {
+			peerDiscovery: {
+				autoDial: true,
+				[MulticastDNS.tag]: {
+					interval: 1000,
+					enabled: true,
+				},
+			}
 		}
 	});
 
@@ -33,15 +44,15 @@ const connectNode = (knownPeers: string[]): Promise<Libp2p> =>
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: [Bootstrap], // MulticastDNS
+			peerDiscovery: [Bootstrap, MulticastDNS], // MulticastDNS
 		},
 		config: {
 			peerDiscovery: {
 				autoDial: true,
-				// [MulticastDNS.tag]: {
-				// 	interval: 1000,
-				// 	enabled: true,
-				// },
+				[MulticastDNS.tag]: {
+					interval: 1000,
+					enabled: true,
+				},
 				[Bootstrap.tag]: {
 					list: knownPeers,
 					interval: 2000,
