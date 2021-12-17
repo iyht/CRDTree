@@ -1,7 +1,12 @@
-import {CRDTree, ICRDTree} from "crdtree";
-import {CRDTreeTransport} from "../../crdtree";
+import {CRDTree, ICRDTree, CRDTreeTransport} from "crdtree";
+
 import Libp2p, {Connection} from "libp2p";
-import {connectNode, initNode} from "./P2P";
+import {NOISE} from "libp2p-noise";
+import TCP from "libp2p-tcp";
+import MPLEX from "libp2p-mplex";
+import MulticastDNS from "libp2p-mdns";
+import Bootstrap from "libp2p-bootstrap";
+
 import {IConnectedCRDTree, ConnectedCRDTree} from "./ConnectedCRDTree";
 
 enum ProtocolType {
@@ -9,43 +14,57 @@ enum ProtocolType {
 	RECOMMENDED,
 }
 
-async function initNetwork(from: CRDTreeTransport<unknown> = [],
-						   protocol: ProtocolType = ProtocolType.BASIC): Promise<IConnectedCRDTree> {
-
-	const node = await initNode();
-
-	node.connectionManager.on('peer:connect', (connection: Connection) => {
-		console.info(`${node.peerId.toB58String()} connected to ${connection.remotePeer.toB58String()}!`);
+const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
+	Libp2p.create({
+		addresses: {
+			listen: [
+				'/ip4/0.0.0.0/tcp/0',
+				'/ip4/0.0.0.0/tcp/0/ws',
+			]
+		},
+		modules: {
+			transport: [TCP],
+			streamMuxer: [MPLEX],
+			connEncryption: [NOISE],
+			peerDiscovery: knownPeers.length === 0 ? [MulticastDNS] : [Bootstrap, MulticastDNS],
+		},
+		config: {
+			peerDiscovery: {
+				autoDial: true,
+				[MulticastDNS.tag]: {
+					interval: 1000,
+					enabled: true,
+				},
+				[Bootstrap.tag]: knownPeers.length === 0 ? undefined : {
+					list: knownPeers,
+					interval: 2000,
+					enabled: true,
+				}
+			}
+		}
 	});
 
+const initNetwork = async (from: CRDTreeTransport<unknown> = [],
+						   protocol: ProtocolType = ProtocolType.BASIC): Promise<IConnectedCRDTree> => {
+	const node = await newNode();
 	await node.start();
 	return new ConnectedCRDTree(node, new CRDTree(from));
-}
+};
 
-async function connectTo(knownPeers: string[]): Promise<IConnectedCRDTree> {
-	const node = await connectNode(knownPeers);
-	const crdt = await new CRDTree();
-
-	node.connectionManager.on('peer:connect', (connection: Connection) => {
-		console.info(`${node.peerId.toB58String()} connected to ${connection.remotePeer.toB58String()}!`);
-	});
-
-	await new Promise<void>((resolve) => {
+const bootstrapCRDTree = (crdt: ICRDTree, node: Libp2p): Promise<{ crdt: ICRDTree, node: Libp2p }> =>
+	new Promise((resolve) => {
 		node.connectionManager.once('peer:connect', (connection: Connection) => {
 			// TODO query for a full history here
-			// connection.
-			return resolve();
+			// const history = await connection.bootstrap(); // TODO
+			// crdt.merge(history); // TODO
+			return resolve({node, crdt});
 		});
 		return node.start();
 	});
 
-	// Create our PubsubChat client
-	// this.pubsubChat.assign(this.node, p2p.PubsubChat.TOPIC, ({message}) => {
-	// 	console.log("received");
-	// 	console.log(message.data);
-	// 	this.crdt.merge(JSON.parse(message.data));
-	// });
+const connectTo = async (knownPeers: string[]): Promise<IConnectedCRDTree> => {
+	const {crdt, node} = await bootstrapCRDTree(new CRDTree(), await newNode(knownPeers));
 	return new ConnectedCRDTree(node, crdt);
-}
+};
 
 export {initNetwork, connectTo};
