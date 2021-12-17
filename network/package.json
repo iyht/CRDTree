@@ -19,7 +19,7 @@
 		"libp2p-webrtc-star": "^0.22.0",
 		"libp2p-websockets": "^0.15.5",
 		"multiaddr": "^9.0.0",
-		"peer-id": "^0.14.0",
+		"peer-id": "^0.16.0",
 		"protons": "^2.0.0",
 		"streaming-iterables": "^5.0.2",
 		"uint8arrays": "^2.1.5",

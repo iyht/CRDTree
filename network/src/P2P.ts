@@ -17,7 +17,7 @@ const initNode = (): Promise<Libp2p> =>
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: [MulticastDNS], // MulticastDNS
+			peerDiscovery: [MulticastDNS],
 		},
 		config: {
 			peerDiscovery: {
@@ -42,7 +42,7 @@ const connectNode = (knownPeers: string[]): Promise<Libp2p> =>
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: [Bootstrap, MulticastDNS], // MulticastDNS
+			peerDiscovery: [Bootstrap, MulticastDNS],
 		},
 		config: {
 			peerDiscovery: {
