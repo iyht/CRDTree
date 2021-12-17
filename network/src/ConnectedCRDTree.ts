@@ -5,8 +5,7 @@ import {debounce} from "debounce";
 
 interface IConnectedCRDTree<T = any> {
 
-	id: string;
-	peerIds: string[];
+	addresses: string[];
 
 	assign(indices: Array<number | string>, item: any): void;
 
@@ -28,12 +27,10 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		});
 	}
 
-	public get id(): string {
-		return this.node.peerId.toB58String();
-	}
-
-	public get peerIds(): string[] {
-		return Array.from(this.node.connections.keys());
+	public get addresses(): string[] {
+		const peerId = this.node.peerId.toB58String();
+		return this.node.transportManager.getAddrs()
+			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {

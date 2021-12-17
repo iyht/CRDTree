@@ -5,44 +5,51 @@ import {NOISE} from "libp2p-noise";
 import MulticastDNS from "libp2p-mdns";
 import Bootstrap from "libp2p-bootstrap";
 
-enum ProtocolType {
-	BASIC,
-	RECOMMENDED,
-}
-
-const initNode = (protocol: ProtocolType): Promise<Libp2p> =>
+const initNode = (): Promise<Libp2p> =>
 	Libp2p.create({
+		addresses: {
+			listen: [
+				'/ip4/0.0.0.0/tcp/0',
+				'/ip4/0.0.0.0/tcp/0/ws',
+			]
+		},
 		modules: {
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: [MulticastDNS],
+			peerDiscovery: [], // MulticastDNS
 		}
 	});
 
 const connectNode = (knownPeers: string[]): Promise<Libp2p> =>
 	Libp2p.create({
+		addresses: {
+			listen: [
+				'/ip4/0.0.0.0/tcp/0',
+				'/ip4/0.0.0.0/tcp/0/ws',
+			]
+		},
 		modules: {
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: [MulticastDNS, Bootstrap]
+			peerDiscovery: [Bootstrap], // MulticastDNS
 		},
 		config: {
 			peerDiscovery: {
 				autoDial: true,
-				[MulticastDNS.tag]: {
-					interval: 1000,
-					enabled: true
-				},
+				// [MulticastDNS.tag]: {
+				// 	interval: 1000,
+				// 	enabled: true,
+				// },
 				[Bootstrap.tag]: {
-					list: knownPeers.map(s => `/ip4/127.0.0.1/tcp/63785/ipfs/${s}`),
+					list: knownPeers,
 					interval: 2000,
-					enabled: true
+					enabled: true,
 				}
 			}
 		}
 	});
 
 
-export {initNode, connectNode, ProtocolType};
+export {initNode, connectNode};

@@ -1,20 +1,30 @@
 import {CRDTree, ICRDTree} from "crdtree";
 import {CRDTreeTransport} from "../../crdtree";
 import Libp2p, {Connection} from "libp2p";
-import {connectNode, initNode, ProtocolType} from "./P2P";
+import {connectNode, initNode} from "./P2P";
 import {IConnectedCRDTree, ConnectedCRDTree} from "./ConnectedCRDTree";
 
-async function initNetwork(from: CRDTreeTransport<unknown> = [],
-									protocol: ProtocolType = ProtocolType.BASIC): Promise<IConnectedCRDTree> {
+enum ProtocolType {
+	BASIC,
+	RECOMMENDED,
+}
 
-	return new ConnectedCRDTree(await initNode(protocol), new CRDTree(from));
+async function initNetwork(from: CRDTreeTransport<unknown> = [],
+						   protocol: ProtocolType = ProtocolType.BASIC): Promise<IConnectedCRDTree> {
+
+	const node = await initNode();
+
+	node.connectionManager.on('peer:connect', (connection: Connection) => {
+		console.info(`${node.peerId.toB58String()} connected to ${connection.remotePeer.toB58String()}!`);
+	});
+
+	await node.start();
+	return new ConnectedCRDTree(node, new CRDTree(from));
 }
 
 async function connectTo(knownPeers: string[]): Promise<IConnectedCRDTree> {
 	const node = await connectNode(knownPeers);
 	const crdt = await new CRDTree();
-
-	console.log(node.multiaddrs)
 
 	node.connectionManager.on('peer:connect', (connection: Connection) => {
 		console.info(`${node.peerId.toB58String()} connected to ${connection.remotePeer.toB58String()}!`);
