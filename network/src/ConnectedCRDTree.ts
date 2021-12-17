@@ -5,6 +5,9 @@ import {debounce} from "debounce";
 
 interface IConnectedCRDTree<T = any> {
 
+	id: string;
+	peerIds: string[];
+
 	assign(indices: Array<number | string>, item: any): void;
 
 	insert(indices: [...Array<number | string>, number], item: any): void;
@@ -25,8 +28,12 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		});
 	}
 
-	public get id() {
-		return this.node.peerId;
+	public get id(): string {
+		return this.node.peerId.toB58String();
+	}
+
+	public get peerIds(): string[] {
+		return Array.from(this.node.connections.keys());
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {
@@ -45,10 +52,11 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		return this.crdt.render();
 	}
 
-	onUpdate(callback: (render: any) => void): void {
+	public onUpdate(callback: (render: any) => void): void {
 		// TODO
 	}
 
+	/*
 	async createBootstrapNode(): Promise<void> {
 		const peerId = await p2p.PeerId.createFromJSON(idJSON)
 
@@ -98,6 +106,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		console.log('\nNode supports protocols:')
 		this.node.upgrader.protocols.forEach((_, p) => console.log(p))
 	}
+	 */
 
 	private readonly broadcast: () => void = debounce(async () => {
 		const updatesToBroadcast = this.pendingUpdates;
@@ -107,7 +116,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			// Publish the message
 			const message = JSON.stringify(updatesToBroadcast);
 			const buffer = Buffer.from(message);
-			await this.pubsubChat.send(buffer);
+			// await this.pubsubChat.send(buffer);
 		} catch (err) {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
