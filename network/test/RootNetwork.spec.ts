@@ -1,8 +1,7 @@
 import {connectTo, initNetwork} from "../src/Network";
 import {expect} from "chai";
 import {IConnectedCRDTree} from "../src/ConnectedCRDTree";
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import {sleep} from "./util";
 
 describe("Network", function () {
 	this.timeout(10000);
@@ -38,8 +37,17 @@ describe("Network", function () {
 		it("should have changes move to other nodes", async () => {
 			crdtA.assign([], "foo");
 			expect(crdtA.render).to.deep.equal("foo");
-			await sleep(5000);
+			await sleep(500);
 			expect(crdtB.render).to.deep.equal("foo");
+			expect(crdtC.render).to.deep.equal("foo");
+		});
+
+		it("should have changes go back to the initial node", async () => {
+			crdtB.assign([], "bar");
+			expect(crdtB.render).to.deep.equal("bar");
+			await sleep(500);
+			expect(crdtA.render).to.deep.equal("bar");
+			expect(crdtC.render).to.deep.equal("bar");
 		});
 	});
 });

@@ -1,5 +1,5 @@
 import pipe from "it-pipe";
-import {Connection, MuxedStream} from "libp2p";
+import Libp2p, {Connection, MuxedStream} from "libp2p";
 
 
 const PROTOCOL_PREFIX = "/crdtree/rec";
@@ -29,4 +29,13 @@ const send = async (message, stream: MuxedStream) => {
 	return messages;
 };
 
-export {PROTOCOL_PREFIX, send, handle};
+const protocol = async (node: Libp2p, updates: any): Promise<void> => {
+	const message = JSON.stringify(updates);
+	const buffer = Buffer.from(message);
+	node.peerStore.peers.forEach((peer) => {
+		node.connectionManager.get(peer.id)?.newStream([PROTOCOL_PREFIX])
+			.then(({stream}) => send(buffer, stream));
+	});
+};
+
+export {PROTOCOL_PREFIX, send, handle, protocol};

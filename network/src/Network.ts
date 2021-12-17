@@ -8,7 +8,7 @@ import MulticastDNS from "libp2p-mdns";
 import Bootstrap from "libp2p-bootstrap";
 
 import {IConnectedCRDTree, ConnectedCRDTree} from "./ConnectedCRDTree";
-import {handle, PROTOCOL_PREFIX} from "./RecommendedProtocol";
+import {handle, protocol, PROTOCOL_PREFIX} from "./RecommendedProtocol";
 
 enum ProtocolType {
 	BASIC,
@@ -45,29 +45,40 @@ const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 		}
 	});
 
+const addProtocol = (type: ProtocolType, node: Libp2p, crdt: ConnectedCRDTree) => {
+	if (type === ProtocolType.RECOMMENDED) {
+		node.handle(PROTOCOL_PREFIX, handle(crdt));
+		crdt.setProtocol(protocol);
+	} else {
+		throw new Error("NOT IMPLEMENTED");
+	}
+}
+
 const initNetwork = async (from: CRDTreeTransport<unknown> = [],
-						   protocol: ProtocolType = ProtocolType.BASIC): Promise<IConnectedCRDTree> => {
+						   protocolType: ProtocolType = ProtocolType.RECOMMENDED): Promise<IConnectedCRDTree> => {
 	const node = await newNode();
-	node.handle(PROTOCOL_PREFIX, handle);
+	const connectedCrdt = new ConnectedCRDTree(node, new CRDTree(from));
+	addProtocol(ProtocolType.RECOMMENDED, node, connectedCrdt);
 	await node.start();
-	return new ConnectedCRDTree(node, new CRDTree(from));
+	return connectedCrdt;
 };
 
-const bootstrapCRDTree = (crdt: ICRDTree, node: Libp2p): Promise<{ crdt: ICRDTree, node: Libp2p }> =>
-	new Promise((resolve) => {
+
+const connectTo = async (knownPeers: string[]): Promise<IConnectedCRDTree> => {
+	const crdt = new CRDTree();
+	const node = await newNode(knownPeers);
+	const connectedCrdt = new ConnectedCRDTree(node, crdt);
+
+	return new Promise((resolve) => {
 		node.connectionManager.once('peer:connect', (connection: Connection) => {
 			// TODO query for a full history here
 			// const history = await connection.bootstrap(); // TODO
 			// crdt.merge(history); // TODO
-			return resolve({node, crdt});
+			addProtocol(ProtocolType.RECOMMENDED, node, connectedCrdt);
+			return resolve(connectedCrdt);
 		});
-		node.handle(PROTOCOL_PREFIX, handle(crdt));
 		return node.start();
 	});
-
-const connectTo = async (knownPeers: string[]): Promise<IConnectedCRDTree> => {
-	const {crdt, node} = await bootstrapCRDTree(new CRDTree(), await newNode(knownPeers));
-	return new ConnectedCRDTree(node, crdt);
 };
 
 export {initNetwork, connectTo};

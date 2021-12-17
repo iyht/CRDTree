@@ -1,6 +1,5 @@
-import {CRDTreeTransport} from "../../crdtree";
 import Libp2p from "libp2p";
-import {ICRDTree} from "crdtree";
+import {ICRDTree, CRDTreeTransport} from "crdtree";
 import {debounce} from "debounce";
 import {PROTOCOL_PREFIX, send} from "./RecommendedProtocol";
 
@@ -15,6 +14,7 @@ interface IConnectedCRDTree<T = any> extends ICRDTree {
 
 class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	private pendingUpdates: CRDTreeTransport<T>;
+	private protocol: (node: Libp2p, updates: any) => Promise<void> = () => Promise.resolve();
 
 	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
@@ -28,6 +28,10 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		const peerId = this.node.peerId.toB58String();
 		return this.node.transportManager.getAddrs()
 			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
+	}
+
+	public setProtocol(protocol: (node: Libp2p, updates: any) => Promise<void>): void {
+		this.protocol = protocol;
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {
@@ -66,45 +70,45 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 
 		try {
 			// Publish the message
-			const message = JSON.stringify(updatesToBroadcast);
-			const buffer = Buffer.from(message);
-			this.node.peerStore.peers.forEach((peer) => {
-				this.node.connectionManager.get(peer.id)?.newStream([PROTOCOL_PREFIX])
-					.then(({stream}) => send(buffer, stream));
-			});
+			await this.protocol(this.node, updatesToBroadcast);
 		} catch (err) {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
 		}
 	}, 200);
 
-	// TODO
-	checkout(ref: string): void {
+	public checkout(ref: string): void {
+		// TODO update metadata
+		return this.crdt.checkout(ref);
 	}
 
 	fork(name?: string): string {
-		return "";
+		// TODO update metadata
+		return this.crdt.fork();
 	}
 
-	join(ref: string): void {
+	public join(ref: string): void {
+		// TODO update metadata
+		return this.crdt.join(ref);
 	}
 
-	listRefs(): string[] {
-		return [];
+	public listRefs(): string[] {
+		return this.crdt.listRefs();
 	}
 
-	merge(remote: ICRDTree<any> | CRDTreeTransport<any>): string[] {
-		return [];
+	public merge(remote: ICRDTree<any> | CRDTreeTransport<any>): string[] {
+		return this.crdt.merge(remote);
 	}
 
-	noop(): void {
+	public noop(): void {
+		return this.crdt.noop();
 	}
 
-	ref(): string {
-		return this.crdt.ref();
+	public get ref(): string {
+		return this.crdt.ref;
 	}
 
-	serialize(): CRDTreeTransport<any> {
+	public serialize(): CRDTreeTransport<any> {
 		return this.crdt.serialize();
 	}
 }
