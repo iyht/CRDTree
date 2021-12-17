@@ -631,7 +631,7 @@ describe("CRDTree", () => {
 				insertInOrderCharsAt(crdtB, 1);
 
 				expect(crdtA).to.merge(crdtB);
-				expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
+				expect(crdtA.render.join("")).to.equal(`${text}@${text}`);
 			});
 		});
 	});

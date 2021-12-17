@@ -3,17 +3,13 @@ import Libp2p from "libp2p";
 import {ICRDTree} from "crdtree";
 import {debounce} from "debounce";
 
-interface IConnectedCRDTree<T = any> {
+interface IConnectedCRDTree<T = any> extends ICRDTree {
 
 	addresses: string[];
 
-	assign(indices: Array<number | string>, item: any): void;
+	onUpdate(callback: (render) => void): void;
 
-	insert(indices: [...Array<number | string>, number], item: any): void;
-
-	delete(indices: Array<number | string>): void;
-
-	onUpdate(callback: (render: any) => void): void;
+	stop(): Promise<void>;
 }
 
 class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
@@ -45,65 +41,23 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		this.crdt.delete(indices);
 	}
 
-	public render(): any {
-		return this.crdt.render();
+	public get render(): any {
+		return this.crdt.render;
 	}
 
 	public onUpdate(callback: (render: any) => void): void {
 		// TODO
 	}
 
-	/*
-	async createBootstrapNode(): Promise<void> {
-		const peerId = await p2p.PeerId.createFromJSON(idJSON)
-
-		// Wildcard listen on TCP and Websocket
-		const addrs = [
-			'/ip4/0.0.0.0/tcp/63785',
-			'/ip4/0.0.0.0/tcp/63786/ws'
-		]
-
-		const signalingServer = await p2p.SignalingServer.start({
-			port: 15555
-		})
-		const ssAddr = `/ip4/${signalingServer.info.host}/tcp/${signalingServer.info.port}/ws/p2p-webrtc-star`
-		console.info(`Signaling server running at ${ssAddr}`)
-		addrs.push(`${ssAddr}/p2p/${peerId.toB58String()}`)
-
-		// Create the node
-		this.node = await p2p.createBootstrapNode(peerId, addrs)
-
-		// Set up our input handler
-		process.stdin.on('data', (message) => {
-			// remove the newline
-			message = message.slice(0, -1)
-			// Iterate over all peers, and send messages to peers we are connected to
-			this.node.peerStore.peers.forEach(async (peerData) => {
-				// If they dont support the chat protocol, ignore
-				// if (!peerData.protocols.includes(ChatProtocol.PROTOCOL)) return
-
-				// If we're not connected, ignore
-				const connection = this.node.connectionManager.get(peerData.id)
-				if (!connection) return
-
-				// try {
-				//   const { stream } = await connection.newStream([ChatProtocol.PROTOCOL])
-				//   await ChatProtocol.send(message, stream)
-				// } catch (err) {
-				//   console.error('Could not negotiate chat protocol stream with peer', err)
-				// }
-			})
-		})
-
-		// Start the node
-		await this.node.start()
-		console.log('Node started with addresses:')
-		this.node.transportManager.getAddrs().forEach(ma => console.log(ma.toString()))
-		console.log(this.node.peerId.toB58String())
-		console.log('\nNode supports protocols:')
-		this.node.upgrader.protocols.forEach((_, p) => console.log(p))
+	public async stop(): Promise<void> {
+		Object.keys(this)
+			.filter((key) => this[key] instanceof Function)
+			.forEach((key) => this[key] = () => {
+				throw new Error("Cannot use a stopped CRDTree");
+			});
+		// TODO something something... broadcast metadata details
+		await this.node.stop();
 	}
-	 */
 
 	private readonly broadcast: () => void = debounce(async () => {
 		const updatesToBroadcast = this.pendingUpdates;
@@ -119,6 +73,36 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
 		}
 	}, 200);
+
+	// TODO
+	checkout(ref: string): void {
+	}
+
+	fork(name?: string): string {
+		return "";
+	}
+
+	join(ref: string): void {
+	}
+
+	listRefs(): string[] {
+		return [];
+	}
+
+	merge(remote: ICRDTree<any> | CRDTreeTransport<any>): string[] {
+		return [];
+	}
+
+	noop(): void {
+	}
+
+	ref(): string {
+		return "";
+	}
+
+	serialize(): CRDTreeTransport<any> {
+		return undefined;
+	}
 }
 
 export {IConnectedCRDTree, ConnectedCRDTree}
