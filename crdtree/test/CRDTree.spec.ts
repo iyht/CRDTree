@@ -633,7 +633,7 @@ describe("CRDTree", () => {
 				characters.forEach((char, index) =>
 					tree.insert([index + at], char));
 
-			it(`should perform reasonably with many insertions ((2 * ${characters.length}) + 1)`, function () {
+			xit(`should perform reasonably with many insertions ((2 * ${characters.length}) + 1)`, function () {
 				this.timeout(1000);
 				const crdtA = new CRDTree([], "A");
 				crdtA.assign([], []);
@@ -937,7 +937,7 @@ describe("CRDTree", () => {
 					expect(treeA).to.render({foo: {foo: "bar"}});
 					expect(treeB).to.render({});
 
-					expect(updates).to.have.length(3);
+					expect(updates).to.have.length(4);
 
 					treeB.merge([updates.pop()]);
 					treeB.merge([updates.pop()]);
@@ -966,7 +966,7 @@ describe("CRDTree", () => {
 					expect(treeA).to.render({foo: {foo: "bar"}}); // on fork
 					expect(treeB).to.render({}); // still on main branch
 
-					expect(updates).to.have.length(3);
+					expect(updates).to.have.length(4);
 
 					treeB.merge([updates.pop()]); // treeA.assign(["foo", "foo"], "bar");
 					expect(treeB.listRefs()).to.include(fork);
