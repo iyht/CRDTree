@@ -599,11 +599,36 @@ describe("CRDTree", () => {
 		describe("onUpdate", () => {
 			it("should eventually call onUpdate", (done: Done) => {
 				const crdt: ICRDTree = new CRDTree();
-				crdt.onUpdate((update) => {
-					expect(update).to.exist;
+				crdt.onUpdate((branches, updates) => {
+					expect(branches).to.exist;
+					expect(updates).to.exist;
 					done();
 				});
 				crdt.assign([], "foo");
+			});
+		});
+
+		describe("onUpdate", () => {
+			it("should call onUpdate with correct relevant commits", (done: Done) => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main: string = crdtA.ref;
+				crdtA.fork("branch_a");
+				crdtA.fork("branch_b");
+				crdtA.assign([], {});
+				crdtA.checkout("branch_a");
+				crdtA.assign([], {});
+				crdtA.assign(["foo"], "bar");
+				crdtA.join("branch_b");
+				crdtA.checkout("main");
+				crdtA.assign([], "foo");
+				crdtA.join("branch_a");
+				crdtB.onUpdate((branches, updates) => {
+					expect(branches).to.include([[main, "branch_a", "branch_b"], [main, "branch_a"], [main]]);
+					expect(updates).to.have.length(9);
+					done();
+				});
+				crdtB.merge(crdtA.serialize());
 			});
 		});
 
