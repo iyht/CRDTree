@@ -794,10 +794,10 @@ describe("CRDTree", () => {
 				crdtA.fork("branch_a");
 				crdtA.assign(["foo"], "bar");
 				crdtA.checkout(main);
-				crdtB.join("branch_a");
+				crdtA.join("branch_a");
 				crdtB.merge(crdtA.serialize());
 				await new Promise((resolve) => setTimeout(resolve, 300));
-				expect(allUpdates).to.have.length(3);
+				expect(allUpdates).to.have.length(4);
 			});
 
 			it("should call onUpdate when merging in new remote commits joined from other branches", async () => {
@@ -861,7 +861,7 @@ describe("CRDTree", () => {
 				crdtB.merge(crdtA.serialize());
 				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 				await sleep(300);
-				expect(allUpdates).to.have.length(10);
+				expect(allUpdates).to.have.length(9);
 			});
 		})
 
