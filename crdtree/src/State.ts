@@ -73,7 +73,9 @@ export default class State<T = any> {
 	}
 
 	private updateClock(changes: Change[]): void {
-		this.clock = changes[changes.length - 1].clock;
+		if (changes[changes.length - 1].clock > this.clock) {
+			this.clock = changes[changes.length - 1].clock;
+		}
 	}
 
 	private addChangesToBranches(changes: BackendChange[]): BackendChange[] {
@@ -127,7 +129,7 @@ export default class State<T = any> {
 				seen.delete(id);
 			});
 		})
-		this.clock = 0;
+		// this.clock = 0;
 		const branch = this.collect();
 		this.reapply(branch);
 	}
