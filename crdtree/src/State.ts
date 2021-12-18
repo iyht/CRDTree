@@ -50,8 +50,9 @@ export default class State<T = any> {
 		// const branch = this.collect();
 		// const newToCurrentBranch = branch.filter((change) => !this.seen(change));
 		let newlyRelevantToThisBranch = this.newCollect(addingToThisBranch);
-		newlyRelevantToThisBranch = newlyRelevantToThisBranch.filter((element, i) => i === newlyRelevantToThisBranch.indexOf(element))
-			.sort(changeSortCompare);
+		newlyRelevantToThisBranch = newlyRelevantToThisBranch.filter(
+			(element, i) => i === newlyRelevantToThisBranch.indexOf(element)
+		).sort(changeSortCompare);
 
 		if (newlyRelevantToThisBranch.length > 0 && newlyRelevantToThisBranch[0].clock > this.clock) {
 			this.updateClock(newlyRelevantToThisBranch); // Has to be in branch bc clock is checked above in predicate
@@ -64,15 +65,18 @@ export default class State<T = any> {
 	}
 
 	public newCollect(changes: BackendChange[]): BackendChange[] {
-		return changes.flatMap((change: BackendChange): BackendChange | BackendChange[] => {
+		const backendChangeOutput = new Map<ID, BackendChange>();
+		changes.forEach((change: BackendChange) => {
 			const {action} = change;
 			if (isFork(action) || isJoin(action)) {
 				const recurrence = this.collectImpl(action.from, action.after);
-				return [change, ...recurrence.values()].filter((change) => !this.seen(change));
-			} else {
-				return change;
+				recurrence.forEach((value, key) =>
+					backendChangeOutput.set(key, value));
 			}
+			backendChangeOutput.set(toID(change), change);
 		});
+
+		return [...backendChangeOutput.values()].filter((change) => !this.seen(change));
 	}
 
 	private updateClock(changes: Change[]): void {
