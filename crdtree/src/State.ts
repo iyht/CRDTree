@@ -94,19 +94,19 @@ export default class State<T = any> {
 	}
 
 	private collect(ref?: string): BackendChange[] {
-		const changes = this.collectImpl(ref ?? this.ref());
+		const changes = this.collectImpl(ref ?? this.ref(), this.latest(ref ?? this.ref()));
 		const listChanges = Array.from(changes.values());
 		return listChanges.sort(changeSortCompare);
 	}
 
-	private collectImpl(ref: string, after?: ID): Map<ID, BackendChange> {
+	private collectImpl(ref: string, after: ID): Map<ID, BackendChange> {
 		const {stored, seen} = this.branches.get(ref) ?? {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()};
 		const relevantChanges = [...stored.values(), ...seen.values()].filter((change) => {
-			if (!after) {
-				return true;
-			}
 			const changeID = toID(change);
-			return changeID === after || nameLt(toID(change), after)
+			if (!after) {
+				return false;
+			}
+			return changeID === after || nameLt(changeID, after)
 		});
 		const backendChangeOutput = new Map<ID, BackendChange>();
 		relevantChanges.forEach((change) => {
