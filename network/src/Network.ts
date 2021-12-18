@@ -43,18 +43,18 @@ const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 	});
 
 const initNetwork = async (from: CRDTreeTransport<unknown> = [],
+						   name?: string,
 						   protocolKind: ProtocolKind = ProtocolKind.RECOMMENDED): Promise<IConnectedCRDTree> => {
 	const node = await newNode();
-	const connectedCrdt = new ConnectedCRDTree(node, new CRDTree(from));
+	const connectedCrdt = new ConnectedCRDTree(node, new CRDTree(from, name));
 	addQueryProtocol(node, connectedCrdt);
 	addProtocol(protocolKind, node, connectedCrdt, []);
 	await node.start();
 	return connectedCrdt;
 };
 
-
-const connectTo = async (knownPeers: string[]): Promise<IConnectedCRDTree> => {
-	const crdt = new CRDTree();
+const connectTo = async (knownPeers: string[], name?: string): Promise<IConnectedCRDTree> => {
+	const crdt = new CRDTree([], name);
 	const node = await newNode(knownPeers);
 	const connectedCrdt = new ConnectedCRDTree(node, crdt);
 

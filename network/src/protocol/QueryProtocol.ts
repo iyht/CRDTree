@@ -38,8 +38,7 @@ const requestHistoryAgain = (node: Libp2p, branch?: string, otherSubs: string[] 
 			return requestHistory(connection, branch);
 		}
 	}
-	return requestHistoryAgain(node, branch);
-
+	return requestHistoryAgain(node, branch, otherSubs);
 };
 
 const handleQueryAfterBootstrapped = (crdt: ConnectedCRDTree) =>
