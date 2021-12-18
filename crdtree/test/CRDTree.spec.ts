@@ -618,89 +618,6 @@ describe("CRDTree", () => {
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 				expect(allUpdates).to.have.length(1);
 			});
-
-
-			it("should call onUpdate when merging in new remote commits forked to other branches", async () => {
-				const crdtA = new CRDTree();
-				const crdtB = new CRDTree(crdtA.serialize(), "B");
-				const main = crdtA.ref;
-				let allUpdates = []
-				crdtB.onUpdate((updates) => {
-					allUpdates.push(...updates);
-				});
-				crdtA.assign([], {});
-				crdtA.fork("branch_a");
-				crdtA.assign(["foo"], "bar");
-				crdtA.checkout(main);
-				crdtB.join("branch_a");
-				crdtB.merge(crdtA.serialize());
-				await new Promise((resolve) => setTimeout(resolve, 300));
-				expect(allUpdates).to.have.length(3);
-			});
-
-			it("should call onUpdate when merging in new remote commits joined from other branches", async () => {
-				const crdtA = new CRDTree();
-				const crdtB = new CRDTree(crdtA.serialize(), "B");
-				const main = crdtA.ref;
-				let allUpdates = []
-				crdtB.onUpdate((updates) => {
-					allUpdates.push(...updates);
-				});
-				crdtA.assign([], {});
-				crdtA.fork("branch_a");
-				crdtA.assign(["foo"], "bar");
-				crdtA.checkout(main);
-				crdtB.merge(crdtA.serialize());
-				await new Promise((resolve) => setTimeout(resolve, 300));
-				expect(allUpdates).to.have.length(1);
-				crdtA.join("branch_a")
-				const changes = crdtA.serialize();
-				crdtB.merge(changes);
-				await new Promise((resolve) => setTimeout(resolve, 300));
-				expect(allUpdates).to.have.length(4);
-			});
-
-			it("should call onUpdate with newly relevant forks and joins and no other changes", async () => {
-				const crdtA = new CRDTree();
-				const crdtB = new CRDTree(crdtA.serialize(), "B");
-				const main = crdtA.ref;
-				let allUpdates = []
-				crdtB.onUpdate((updates) => {
-					allUpdates.push(...updates);
-				});
-				crdtA.fork("branch_a");
-				crdtA.checkout(main);
-				crdtA.join("branch_a");
-				crdtB.merge(crdtA.serialize());
-				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-				await sleep(300);
-				expect(allUpdates).to.have.length(2);
-			});
-
-			it("should call onUpdate with newly relevant commits", async () => {
-				const crdtA = new CRDTree();
-				const crdtB = new CRDTree(crdtA.serialize(), "B");
-				const main = crdtA.ref;
-				let allUpdates = []
-				crdtB.onUpdate((updates) => {
-					allUpdates.push(...updates);
-				});
-				crdtA.fork("branch_a");
-				crdtA.assign([], {});
-				crdtA.fork("branch_b");
-				crdtA.assign([], {});
-				crdtA.checkout("branch_a");
-				crdtA.assign([], {});
-				crdtA.assign(["foo"], "bar");
-				crdtA.join("branch_b");
-				crdtA.checkout(main);
-				crdtA.assign([], "foo");
-				crdtA.join("branch_a");
-				crdtB.merge(crdtA.serialize());
-				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-				await sleep(300);
-				expect(allUpdates).to.have.length(10);
-			});
 		});
 
 		describe("stress test", () => {
@@ -863,6 +780,90 @@ describe("CRDTree", () => {
 				expect(tree).to.render({});
 			});
 		});
+
+		describe("onUpdate with forks and joins", () => {
+			it("should call onUpdate when merging in new remote commits forked to other branches", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.assign([], {});
+				crdtA.fork("branch_a");
+				crdtA.assign(["foo"], "bar");
+				crdtA.checkout(main);
+				crdtB.join("branch_a");
+				crdtB.merge(crdtA.serialize());
+				await new Promise((resolve) => setTimeout(resolve, 300));
+				expect(allUpdates).to.have.length(3);
+			});
+
+			it("should call onUpdate when merging in new remote commits joined from other branches", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.assign([], {});
+				crdtA.fork("branch_a");
+				crdtA.assign(["foo"], "bar");
+				crdtA.checkout(main);
+				crdtB.merge(crdtA.serialize());
+				await new Promise((resolve) => setTimeout(resolve, 300));
+				expect(allUpdates).to.have.length(1);
+				crdtA.join("branch_a")
+				const changes = crdtA.serialize();
+				crdtB.merge(changes);
+				await new Promise((resolve) => setTimeout(resolve, 300));
+				expect(allUpdates).to.have.length(4);
+			});
+
+			it("should call onUpdate with newly relevant forks and joins and no other changes", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.fork("branch_a");
+				crdtA.checkout(main);
+				crdtA.join("branch_a");
+				crdtB.merge(crdtA.serialize());
+				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+				await sleep(300);
+				expect(allUpdates).to.have.length(2);
+			});
+
+			it("should call onUpdate with newly relevant commits", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.fork("branch_a");
+				crdtA.assign([], {});
+				crdtA.fork("branch_b");
+				crdtA.assign([], {});
+				crdtA.checkout("branch_a");
+				crdtA.assign([], {});
+				crdtA.assign(["foo"], "bar");
+				crdtA.join("branch_b");
+				crdtA.checkout(main);
+				crdtA.assign([], "foo");
+				crdtA.join("branch_a");
+				crdtB.merge(crdtA.serialize());
+				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+				await sleep(300);
+				expect(allUpdates).to.have.length(10);
+			});
+		})
 
 		describe("async collaboration", () => {
 			let treeA: ICRDTree;
