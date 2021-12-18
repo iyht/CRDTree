@@ -661,6 +661,7 @@ describe("CRDTree", () => {
 			it("should call onUpdate with newly relevant commits", async () => {
 				const crdtA = new CRDTree();
 				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
 				let allUpdates = []
 				crdtB.onUpdate((updates) => {
 					allUpdates.push(...updates);
@@ -672,7 +673,7 @@ describe("CRDTree", () => {
 				crdtA.assign([], {});
 				crdtA.assign(["foo"], "bar");
 				crdtA.join("branch_b");
-				crdtA.checkout("main");
+				crdtA.checkout(main);
 				crdtA.assign([], "foo");
 				crdtA.join("branch_a");
 				crdtB.merge(crdtA.serialize());
