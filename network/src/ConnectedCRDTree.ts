@@ -21,6 +21,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
 		this.crdt.onUpdate((update) => {
+			this.protocol.saveJoins(update, this.meta);
 			this.pendingUpdates.push(...update);
 			this.broadcast();
 		});
@@ -112,7 +113,6 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}
 
 	public join(ref: string): void {
-		// TODO tell the metadata that there was a join
 		return this.crdt.join(ref);
 	}
 
