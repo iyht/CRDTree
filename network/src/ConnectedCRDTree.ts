@@ -1,7 +1,7 @@
 import Libp2p from "libp2p";
 import {ICRDTree, CRDTreeTransport} from "crdtree";
 import {debounce} from "debounce";
-import {ProtocolType} from "./protocol/ProtocolType";
+import {baseProtocol, Protocol, ProtocolKind} from "./protocol/Protocol";
 
 interface IConnectedCRDTree<T = any> extends ICRDTree {
 
@@ -14,8 +14,7 @@ interface IConnectedCRDTree<T = any> extends ICRDTree {
 
 class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	private pendingUpdates: CRDTreeTransport<T>;
-	private protocol: (node: Libp2p, updates: any) => Promise<void> = () => Promise.resolve();
-	private protocolType;
+	private protocol: Protocol = baseProtocol;
 
 	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
@@ -31,13 +30,12 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
 	}
 
-	public setProtocol(protocol: (node: Libp2p, updates: any) => Promise<void>, kind: ProtocolType): void {
+	public setProtocol(protocol: Protocol): void {
 		this.protocol = protocol;
-		this.protocolType = kind;
 	}
 
-	public getProtocolType(): ProtocolType {
-		return this.protocolType;
+	public getProtocolKind(): ProtocolKind {
+		return this.protocol.kind;
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {
@@ -57,7 +55,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}
 
 	public onUpdate(callback: (render: any) => void): void {
-		// TODO
+		this.crdt.onUpdate(() => callback(this.crdt.render));
 	}
 
 	public async stop(): Promise<void> {
@@ -72,7 +70,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 					}
 				}
 			});
-		// TODO something something... broadcast metadata details
+		// TODO future work ... something something... broadcast metadata details
 		await this.node.stop();
 	}
 
@@ -82,7 +80,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 
 		try {
 			// Publish the message
-			await this.protocol(this.node, updatesToBroadcast);
+			await this.protocol.broadcast(this.node, updatesToBroadcast);
 		} catch (err) {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
@@ -90,22 +88,24 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}, 200);
 
 	public checkout(ref: string): void {
-		// TODO update metadata
+		this.protocol.subscribe(ref);
 		return this.crdt.checkout(ref);
 	}
 
-	fork(name?: string): string {
-		// TODO update metadata
-		return this.crdt.fork();
+	public fork(name?: string): string {
+		const ref = this.crdt.fork(name);
+		this.protocol.subscribe(ref);
+		return ref;
 	}
 
 	public join(ref: string): void {
-		// TODO update metadata
 		return this.crdt.join(ref);
 	}
 
 	public listRefs(): string[] {
+		// TODO needed for metadata setup
 		return this.crdt.listRefs();
+		// TODO actually don't list crdt's refs. list metadata refs!!!
 	}
 
 	public merge(remote: ICRDTree<any> | CRDTreeTransport<any>): string[] {

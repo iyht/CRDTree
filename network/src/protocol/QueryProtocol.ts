@@ -1,6 +1,6 @@
 import Libp2p, {Connection, HandlerProps, MuxedStream} from "libp2p";
 import pipe from "it-pipe";
-import {ProtocolType} from "./ProtocolType";
+import {ProtocolKind} from "./Protocol";
 import {CRDTreeTransport} from "crdtree";
 import {ConnectedCRDTree} from "../ConnectedCRDTree";
 import {addProtocol} from "./addProtocol";
@@ -14,7 +14,7 @@ enum QueryKind {
 
 interface QueryMessage {
 	kind: QueryKind;
-	protocol?: ProtocolType;
+	protocol?: ProtocolKind;
 	history?: CRDTreeTransport<unknown>;
 }
 
@@ -44,7 +44,7 @@ const handleRequest = (crdt: ConnectedCRDTree) =>
 				if (query.kind === QueryKind.BOOTSTRAP_REQ) {
 					const queryMessage: QueryMessage = {
 						kind: QueryKind.BOOTSTRAP_RES,
-						protocol: crdt.getProtocolType(),
+						protocol: crdt.getProtocolKind(),
 						history: crdt.serialize(),
 					};
 					connection.newStream([PROTOCOL_PREFIX]).then(({stream}) => send(queryMessage, stream));
@@ -62,7 +62,7 @@ const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) =>
 				if (query.kind === QueryKind.BOOTSTRAP_RES) {
 					const {protocol, history} = query;
 					if (protocol === undefined) {
-						if (crdt.getProtocolType() === undefined) {
+						if (crdt.getProtocolKind() === undefined) {
 							requestHistoryAgain(node);
 						}
 					} else {
