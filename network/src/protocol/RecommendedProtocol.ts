@@ -1,5 +1,7 @@
 import pipe from "it-pipe";
-import Libp2p, {Connection, MuxedStream} from "libp2p";
+import Libp2p, {MuxedStream} from "libp2p";
+import {ConnectedCRDTree} from "../ConnectedCRDTree";
+import {ProtocolType} from "./ProtocolType";
 
 
 const PROTOCOL_PREFIX = "/crdtree/rec";
@@ -38,4 +40,9 @@ const protocol = async (node: Libp2p, updates: any): Promise<void> => {
 	});
 };
 
-export {PROTOCOL_PREFIX, send, handle, protocol};
+const addProtocol = (node: Libp2p, crdt: ConnectedCRDTree): void => {
+	node.handle(PROTOCOL_PREFIX, handle(crdt));
+	crdt.setProtocol(protocol, ProtocolType.RECOMMENDED);
+};
+
+export {PROTOCOL_PREFIX, send, handle, protocol, addProtocol};

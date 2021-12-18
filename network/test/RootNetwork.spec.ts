@@ -51,3 +51,6 @@ describe("Network", function () {
 		});
 	});
 });
+
+// TODO test with a node dropping out
+// TODO test with basic network thingy

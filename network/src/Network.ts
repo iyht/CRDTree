@@ -1,4 +1,4 @@
-import {CRDTree, ICRDTree, CRDTreeTransport} from "crdtree";
+import {CRDTree, CRDTreeTransport} from "crdtree";
 
 import Libp2p, {Connection} from "libp2p";
 import {NOISE} from "libp2p-noise";
@@ -7,13 +7,10 @@ import MPLEX from "libp2p-mplex";
 import MulticastDNS from "libp2p-mdns";
 import Bootstrap from "libp2p-bootstrap";
 
-import {IConnectedCRDTree, ConnectedCRDTree} from "./ConnectedCRDTree";
-import {handle, protocol, PROTOCOL_PREFIX} from "./RecommendedProtocol";
-
-enum ProtocolType {
-	BASIC,
-	RECOMMENDED,
-}
+import {ConnectedCRDTree, IConnectedCRDTree} from "./ConnectedCRDTree";
+import * as RP from "./protocol/RecommendedProtocol";
+import * as QP from "./protocol/QueryProtocol";
+import {ProtocolType} from "./protocol/ProtocolType";
 
 const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 	Libp2p.create({
@@ -47,8 +44,7 @@ const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 
 const addProtocol = (type: ProtocolType, node: Libp2p, crdt: ConnectedCRDTree) => {
 	if (type === ProtocolType.RECOMMENDED) {
-		node.handle(PROTOCOL_PREFIX, handle(crdt));
-		crdt.setProtocol(protocol);
+		RP.addProtocol(node, crdt);
 	} else {
 		throw new Error("NOT IMPLEMENTED");
 	}
@@ -58,7 +54,8 @@ const initNetwork = async (from: CRDTreeTransport<unknown> = [],
 						   protocolType: ProtocolType = ProtocolType.RECOMMENDED): Promise<IConnectedCRDTree> => {
 	const node = await newNode();
 	const connectedCrdt = new ConnectedCRDTree(node, new CRDTree(from));
-	addProtocol(ProtocolType.RECOMMENDED, node, connectedCrdt);
+	QP.addProtocol(node, connectedCrdt);
+	addProtocol(protocolType, node, connectedCrdt);
 	await node.start();
 	return connectedCrdt;
 };
@@ -70,11 +67,8 @@ const connectTo = async (knownPeers: string[]): Promise<IConnectedCRDTree> => {
 	const connectedCrdt = new ConnectedCRDTree(node, crdt);
 
 	return new Promise((resolve) => {
-		node.connectionManager.once('peer:connect', (connection: Connection) => {
-			// TODO query for a full history here
-			// const history = await connection.bootstrap(); // TODO
-			// crdt.merge(history); // TODO
-			addProtocol(ProtocolType.RECOMMENDED, node, connectedCrdt);
+		node.connectionManager.once('peer:connect', async (connection: Connection) => {
+			await QP.bootstrap(node, connectedCrdt, connection);
 			return resolve(connectedCrdt);
 		});
 		return node.start();

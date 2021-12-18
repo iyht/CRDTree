@@ -1,7 +1,7 @@
 import Libp2p from "libp2p";
 import {ICRDTree, CRDTreeTransport} from "crdtree";
 import {debounce} from "debounce";
-import {PROTOCOL_PREFIX, send} from "./RecommendedProtocol";
+import {ProtocolType} from "./protocol/ProtocolType";
 
 interface IConnectedCRDTree<T = any> extends ICRDTree {
 
@@ -15,6 +15,7 @@ interface IConnectedCRDTree<T = any> extends ICRDTree {
 class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	private pendingUpdates: CRDTreeTransport<T>;
 	private protocol: (node: Libp2p, updates: any) => Promise<void> = () => Promise.resolve();
+	private protocolType;
 
 	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
@@ -30,8 +31,13 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
 	}
 
-	public setProtocol(protocol: (node: Libp2p, updates: any) => Promise<void>): void {
+	public setProtocol(protocol: (node: Libp2p, updates: any) => Promise<void>, kind: ProtocolType): void {
 		this.protocol = protocol;
+		this.protocolType = kind;
+	}
+
+	public getProtocolType(): ProtocolType {
+		return this.protocolType;
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {
