@@ -21,7 +21,7 @@ export interface ICRDTree<T = any> {
 
 	noop(): void; // useful when we add commit messages
 
-	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
+	onUpdate(callback: (branches: string[][], update: CRDTreeTransport<T>) => void): void;
 
 	ref(): string;
 
