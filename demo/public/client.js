@@ -23,7 +23,6 @@ webSocket.addEventListener('open', function(e) {
 			const network = prompt('Know an address?');
 			send(network ? "connect" : "start", network);
 		} else {
-			console.log(data.render);
 			name.value = data.name;
 			address.textContent = `My address: ${data.addresses.pop()}`;
 			textarea.value = renderMessages(data.render);
