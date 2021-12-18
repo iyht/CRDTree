@@ -30,7 +30,9 @@ export default class State<T = any> {
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
-		this.branches = new Map([[ROOT, new Map()]]);
+		this.branches = new Map([
+			[ROOT, {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()}]
+		]);
 		this._seen = new Set<ID>();
 		this.clock = 0;
 		this.reinitObjects();
@@ -100,7 +102,10 @@ export default class State<T = any> {
 	}
 
 	private collectImpl(ref: string, after: ID): Map<ID, BackendChange> {
-		const {stored, seen} = this.branches.get(ref) ?? {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()};
+		const {stored, seen} = this.branches.get(ref) ?? {
+			stored: new Map<ID, BackendChange>(),
+			seen: new Map<ID, BackendChange>()
+		};
 		const relevantChanges = [...stored.values(), ...seen.values()].filter((change) => {
 			const changeID = toID(change);
 			if (!after) {
@@ -317,12 +322,12 @@ export default class State<T = any> {
 		if (ref) {
 			return this.collect(ref);
 		} else {
-  		const changes = [];
-	  	for (const {stored, seen} of this.branches.values()) {
-		  	changes.push(...stored.values(), ...seen.values());
-      }
-      return changes;
-    }
+			const changes = [];
+			for (const {stored, seen} of this.branches.values()) {
+				changes.push(...stored.values(), ...seen.values());
+			}
+			return changes;
+		}
 	}
 
 	public render(): T {
