@@ -36,6 +36,16 @@
   resolved "https://registry.yarnpkg.com/@multiformats/base-x/-/base-x-4.0.1.tgz#95ff0fa58711789d53aefb2590a8b7a4e715d121"
   integrity sha512-eMk0b9ReBbV23xXU693TAIrLyeO5iTgBZGSJfpqriG8UkYvr/hC9u9pyMlAakDNHWmbhMZCDs6KQO0jzKD8OTw==
 
+"@noble/ed25519@^1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@noble/ed25519/-/ed25519-1.3.0.tgz#a55b6bdd18991d6051f819e9c71d9341706a751e"
+  integrity sha512-k6ddjHcmfHF5LoZRv2j7WktgY8C8lzAqiu5ukWfGIlPUlpLn1tn1pfILXaXHY1DCG0s3qvGM1SluLtVpckWwMA==
+
+"@noble/secp256k1@^1.3.0":
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/@noble/secp256k1/-/secp256k1-1.3.4.tgz#158ded712d09237c0d3428be60dc01ce8ebab9fb"
+  integrity sha512-ZVRouDO5mbdCiDg4zCd3ZZABduRtpy4tCnB33Gh9upHe9tRzpiqbRSN1VTjrj/2g8u2c6MBi0YLNnNQpBYOiWg==
+
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@protobufjs/aspromise/-/aspromise-1.1.2.tgz#9b8b0cc663d669a7d8f6f5d0893a14d348f30fbf"
@@ -177,6 +187,11 @@
   integrity sha512-cdeYyv4KWoEgpBISTxWvqYsVy444DOqehiF3fM3ne10AmJ62RSyNkUnxMJXHQWRQQX2eR94m5y1IZyDwBjV9FQ==
   dependencies:
     "@types/node" "*"
+
+"@types/debounce@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@types/debounce/-/debounce-1.2.1.tgz#79b65710bc8b6d44094d286aecf38e44f9627852"
+  integrity sha512-epMsEE85fi4lfmJUH/89/iV/LI+F5CvNIvmgs5g5jYFPfhO2S/ae8WSsLOKWdwtoaZw9Q2IhJ4tQ5tFCcS/4HA==
 
 "@types/express-serve-static-core@^4.17.18":
   version "4.17.26"
@@ -844,7 +859,7 @@ dirty-chai@^2.0.1:
   resolved "https://registry.yarnpkg.com/dirty-chai/-/dirty-chai-2.0.1.tgz#6b2162ef17f7943589da840abc96e75bda01aff3"
   integrity sha512-ys79pWKvDMowIDEPC6Fig8d5THiC0DJ2gmTeGzVAoEH18J8OzLud0Jh7I9IWg3NSk8x2UocznUuFmfHCXYZx9w==
 
-dns-over-http-resolver@^1.0.0:
+dns-over-http-resolver@^1.0.0, dns-over-http-resolver@^1.2.3:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/dns-over-http-resolver/-/dns-over-http-resolver-1.2.3.tgz#194d5e140a42153f55bb79ac5a64dd2768c36af9"
   integrity sha512-miDiVSI6KSNbi4SVifzO/reD8rMnxgrlnkrlkugOLQpWQTe2qMdHsZp5DmfKjxNE+/T3VAAYLQUZMv9SMr6+AA==
@@ -1764,6 +1779,20 @@ libp2p-crypto@^0.19.0, libp2p-crypto@^0.19.4:
     uint8arrays "^3.0.0"
     ursa-optional "^0.10.1"
 
+libp2p-crypto@^0.21.0:
+  version "0.21.0"
+  resolved "https://registry.yarnpkg.com/libp2p-crypto/-/libp2p-crypto-0.21.0.tgz#a5f2aaf49434766ab899e42c92afec92ce660d39"
+  integrity sha512-fBBzK4v1xwDt8xktWpDPCTeoBhKzxc9JMv4EyPJpoqAcuoS06+0/OLODhYod5LFiSu3lsWW+JnxblLRs5O+mjA==
+  dependencies:
+    "@noble/ed25519" "^1.3.0"
+    "@noble/secp256k1" "^1.3.0"
+    err-code "^3.0.1"
+    iso-random-stream "^2.0.0"
+    multiformats "^9.4.5"
+    node-forge "^0.10.0"
+    protobufjs "^6.11.2"
+    uint8arrays "^3.0.0"
+
 libp2p-interfaces@^0.10.4:
   version "0.10.4"
   resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-0.10.4.tgz#4365d792b0b7ae048ac3b268ef3bf9f3da4d746b"
@@ -2071,6 +2100,18 @@ ms@^2.1.1:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
+multiaddr@^10.0.1:
+  version "10.0.1"
+  resolved "https://registry.yarnpkg.com/multiaddr/-/multiaddr-10.0.1.tgz#0d15848871370860a4d266bb44d93b3dac5d90ef"
+  integrity sha512-G5upNcGzEGuTHkzxezPrrD6CaIHR9uo+7MwqhNVcXTs33IInon4y7nMiGxl2CY5hG7chvYQUQhz5V52/Qe3cbg==
+  dependencies:
+    dns-over-http-resolver "^1.2.3"
+    err-code "^3.0.1"
+    is-ip "^3.1.0"
+    multiformats "^9.4.5"
+    uint8arrays "^3.0.0"
+    varint "^6.0.0"
+
 multiaddr@^9.0.1:
   version "9.0.2"
   resolved "https://registry.yarnpkg.com/multiaddr/-/multiaddr-9.0.2.tgz#ab322bb768e77270650ebce71a452fdc760bda0d"
@@ -2192,7 +2233,7 @@ netmask@^2.0.2:
 "network@file:../network":
   version "1.0.0"
   dependencies:
-    crdtree "file:../../../Library/Caches/Yarn/v6/npm-network-1.0.0-686b42d4-d55e-4287-a7cc-7f52732981df-1639856254902/node_modules/crdtree"
+    crdtree "file:../../../Library/Caches/Yarn/v6/npm-network-1.0.0-a7e8de25-25f8-46e9-9b10-37adc3a9ff22-1639860667102/node_modules/crdtree"
     debounce "^1.2.1"
     it-pipe "^1.1.0"
     libp2p "^0.31.0-rc.0"
@@ -2201,6 +2242,8 @@ netmask@^2.0.2:
     libp2p-mplex "^0.10.0"
     libp2p-noise "^2.0.0"
     libp2p-tcp "^0.15.1"
+    multiaddr "^10.0.1"
+    peer-id "^0.16.0"
 
 nise@^5.0.1:
   version "5.1.0"
@@ -2454,6 +2497,17 @@ peer-id@^0.14.0, peer-id@^0.14.2, peer-id@^0.14.3:
     multihashes "^4.0.2"
     protobufjs "^6.10.2"
     uint8arrays "^2.0.5"
+
+peer-id@^0.16.0:
+  version "0.16.0"
+  resolved "https://registry.yarnpkg.com/peer-id/-/peer-id-0.16.0.tgz#0913062cfa4378707fe69c949b5720b3efadbf32"
+  integrity sha512-EmL7FurFUduU9m1PS9cfJ5TAuCvxKQ7DKpfx3Yj6IKWyBRtosriFuOag/l3ni/dtPgPLwiA4R9IvpL7hsDLJuQ==
+  dependencies:
+    class-is "^1.1.0"
+    libp2p-crypto "^0.21.0"
+    multiformats "^9.4.5"
+    protobufjs "^6.10.2"
+    uint8arrays "^3.0.0"
 
 pem-jwk@^2.0.0:
   version "2.0.0"

@@ -1,6 +1,7 @@
 import http from "http";
 import express from "express";
 import WebSocket from "ws";
+import {debounce} from "debounce";
 
 import {IConnectedCRDTree} from "network/dist/src/ConnectedCRDTree";
 import {initNetwork, connectTo} from "network/dist/src/Network";
@@ -78,13 +79,13 @@ const bootstrap = (crdt: ICRDTree) => {
 	crdt.assign(["messages"], []);
 };
 
-const send = (data) => {
+const send = debounce((data) => {
 	webSocketServer.clients.forEach((client) => {
 		if (client.readyState === WebSocket.OPEN) {
 			client.send(JSON.stringify(data));
 		}
 	});
-};
+}, 50);
 
 const port = process.env.PORT || 1234;
 server.listen(port, () => {
