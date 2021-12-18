@@ -632,7 +632,7 @@ describe("CRDTree", () => {
 				crdtA.assign(["foo"], "bar");
 				crdtB.checkout("branch_a");
 				crdtB.merge(crdtA.serialize());
-				await new Promise((resolve) => setTimeout(resolve, 1000));
+				await new Promise((resolve) => setTimeout(resolve, 300));
 				expect(allUpdates).to.have.length(3);
 			});
 
@@ -649,14 +649,18 @@ describe("CRDTree", () => {
 				crdtA.assign(["foo"], "bar");
 				crdtA.checkout(main);
 				crdtB.merge(crdtA.serialize());
-				await new Promise((resolve) => setTimeout(resolve, 1000));
-				expect(allUpdates).to.have.length(3);
+				await new Promise((resolve) => setTimeout(resolve, 300));
+				expect(allUpdates).to.have.length(1);
+				crdtA.join("branch_a")
+				const changes = crdtA.serialize();
+				crdtB.merge(changes);
+				await new Promise((resolve) => setTimeout(resolve, 300));
+				expect(allUpdates).to.have.length(4);
 			});
 
-			it("should call onUpdate with correct relevant commits", async () => {
+			it("should call onUpdate with newly relevant commits", async () => {
 				const crdtA = new CRDTree();
 				const crdtB = new CRDTree(crdtA.serialize(), "B");
-				const main: string = crdtA.ref;
 				let allUpdates = []
 				crdtB.onUpdate((updates) => {
 					allUpdates.push(...updates);
@@ -673,7 +677,7 @@ describe("CRDTree", () => {
 				crdtA.join("branch_a");
 				crdtB.merge(crdtA.serialize());
 				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-				await sleep(1000);
+				await sleep(300);
 				expect(allUpdates).to.have.length(9);
 			});
 		});
