@@ -605,9 +605,37 @@ describe("CRDTree", () => {
 				});
 				crdt.assign([], "foo");
 			});
-		});
 
-		describe("onUpdate", () => {
+			it("should call onUpdate when merging in new remote commits", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.assign([], {});
+				crdtB.merge(crdtA.serialize());
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				expect(allUpdates).to.have.length(1);
+			});
+
+
+			it("should call onUpdate when merging in new remote commits on other branches", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.assign([], {});
+				crdtA.fork("branch_a");
+				crdtA.assign(["foo"], "bar");
+				crdtB.checkout("branch_a");
+				crdtB.merge(crdtA.serialize());
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				expect(allUpdates).to.have.length(3);
+			});
+
 			it("should call onUpdate with correct relevant commits", async () => {
 				const crdtA = new CRDTree();
 				const crdtB = new CRDTree(crdtA.serialize(), "B");
