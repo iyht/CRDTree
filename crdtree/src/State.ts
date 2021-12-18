@@ -47,8 +47,9 @@ export default class State<T = any> {
 
 		// const branch = this.collect();
 		// const newToCurrentBranch = branch.filter((change) => !this.seen(change));
-		const newlyRelevantToThisBranch = this.newCollect(addingToThisBranch).sort(changeSortCompare);
-
+		let newlyRelevantToThisBranch = this.newCollect(addingToThisBranch);
+		newlyRelevantToThisBranch = newlyRelevantToThisBranch.filter((element, i) => i === newlyRelevantToThisBranch.indexOf(element))
+			.sort(changeSortCompare);
 
 		if (newlyRelevantToThisBranch.length > 0 && newlyRelevantToThisBranch[0].clock > this.clock) {
 			this.updateClock(newlyRelevantToThisBranch); // Has to be in branch bc clock is checked above in predicate
