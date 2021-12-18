@@ -16,6 +16,7 @@ interface QueryMessage {
 	kind: QueryKind;
 	protocol?: ProtocolKind;
 	history?: CRDTreeTransport<unknown>;
+	metaHistory?: CRDTreeTransport<unknown>;
 }
 
 const requestHistory = (connection: Connection) => {
@@ -44,8 +45,9 @@ const handleRequest = (crdt: ConnectedCRDTree) =>
 				if (query.kind === QueryKind.BOOTSTRAP_REQ) {
 					const queryMessage: QueryMessage = {
 						kind: QueryKind.BOOTSTRAP_RES,
-						protocol: crdt.getProtocolKind(),
+						protocol: crdt.protocolKind,
 						history: crdt.serialize(),
+						metaHistory: crdt.serializeProtocol(),
 					};
 					connection.newStream([PROTOCOL_PREFIX]).then(({stream}) => send(queryMessage, stream));
 				}
@@ -60,14 +62,14 @@ const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) =>
 			for await (const message of source) {
 				const query: QueryMessage = JSON.parse(message.toString());
 				if (query.kind === QueryKind.BOOTSTRAP_RES) {
-					const {protocol, history} = query;
+					const {protocol, history, metaHistory} = query;
 					if (protocol === undefined) {
-						if (crdt.getProtocolKind() === undefined) {
+						if (crdt.protocolKind === undefined) {
 							requestHistoryAgain(node);
 						}
 					} else {
-						addProtocol(protocol, node, crdt);
 						crdt.merge(history ?? []);
+						addProtocol(protocol, node, crdt, metaHistory);
 						resolve();
 					}
 				} else {

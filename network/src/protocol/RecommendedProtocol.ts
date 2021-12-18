@@ -2,6 +2,7 @@ import Libp2p from "libp2p";
 import {ConnectedCRDTree} from "../ConnectedCRDTree";
 import {Protocol, ProtocolKind} from "./Protocol";
 import {addSpecificProtocol, handle, send} from "./Common";
+import {CRDTree, CRDTreeTransport, ICRDTree} from "crdtree";
 
 const PROTOCOL_PREFIX = "/crdtree/rec";
 
@@ -13,12 +14,15 @@ const protocol: Protocol = {
 				.then(send(updates));
 		});
 	},
-	listRefs(): string[] {
+	listRefs(userCRDT: ICRDTree, meta: ICRDTree): string[] {
 		return [];
 	},
 	subscribe(ref: string): Promise<void> {
 		return Promise.resolve(undefined);
-	}
+	},
+	initMeta: (history: CRDTreeTransport<any>) => {
+		return new CRDTree(history);
+	},
 };
 
 const addRecommendedProtocol = addSpecificProtocol(PROTOCOL_PREFIX, protocol);

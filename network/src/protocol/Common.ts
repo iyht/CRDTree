@@ -19,9 +19,17 @@ const send = (updates: CRDTreeTransport<unknown>) => async ({stream}: HandlerPro
 	return pipe([buffer], stream);
 };
 
-const addSpecificProtocol = (prefix: string, protocol: Protocol) => (node: Libp2p, crdt: ConnectedCRDTree): void => {
+const addSpecificProtocol = (prefix: string, protocol: Protocol) =>
+	(node: Libp2p, crdt: ConnectedCRDTree, metaHistory: CRDTreeTransport<unknown>): void => {
 	node.handle(prefix, handle(crdt));
-	crdt.setProtocol(protocol);
+	const meta = protocol.initMeta(metaHistory);
+	const main = crdt.ref;
+	const refs = crdt.listRefs();
+	crdt.setProtocol(protocol, meta);
+	for (const ref of refs) {
+		crdt.checkout(ref);
+	}
+	crdt.checkout(main);
 };
 
 export {handle, send, addSpecificProtocol};

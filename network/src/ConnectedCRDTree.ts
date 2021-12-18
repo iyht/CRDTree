@@ -15,6 +15,7 @@ interface IConnectedCRDTree<T = any> extends ICRDTree {
 class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	private pendingUpdates: CRDTreeTransport<T>;
 	private protocol: Protocol = baseProtocol;
+	private meta: ICRDTree;
 
 	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
@@ -30,12 +31,17 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
 	}
 
-	public setProtocol(protocol: Protocol): void {
+	public setProtocol(protocol: Protocol, meta: ICRDTree): void {
 		this.protocol = protocol;
+		this.meta = meta;
 	}
 
-	public getProtocolKind(): ProtocolKind {
+	public get protocolKind(): ProtocolKind {
 		return this.protocol.kind;
+	}
+
+	public serializeProtocol(): CRDTreeTransport<any> {
+		return this.meta?.serialize();
 	}
 
 	public assign(indices: Array<number | string>, item: any): void {
@@ -80,7 +86,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 
 		try {
 			// Publish the message
-			await this.protocol.broadcast(this.node, updatesToBroadcast);
+			await this.protocol.broadcast(this.node, updatesToBroadcast, this.meta);
 		} catch (err) {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
@@ -88,13 +94,13 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}, 200);
 
 	public checkout(ref: string): void {
-		this.protocol.subscribe(ref);
+		this.protocol.subscribe(ref, this.meta);
 		return this.crdt.checkout(ref);
 	}
 
 	public fork(name?: string): string {
 		const ref = this.crdt.fork(name);
-		this.protocol.subscribe(ref);
+		this.protocol.subscribe(ref, this.meta);
 		return ref;
 	}
 
@@ -104,8 +110,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 
 	public listRefs(): string[] {
 		// TODO needed for metadata setup
-		return this.crdt.listRefs();
-		// TODO actually don't list crdt's refs. list metadata refs!!!
+		return this.protocol.listRefs(this.crdt, this.meta);
 	}
 
 	public merge(remote: ICRDTree<any> | CRDTreeTransport<any>): string[] {

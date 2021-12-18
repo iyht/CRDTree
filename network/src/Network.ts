@@ -8,7 +8,7 @@ import MulticastDNS from "libp2p-mdns";
 import Bootstrap from "libp2p-bootstrap";
 
 import {ConnectedCRDTree, IConnectedCRDTree} from "./ConnectedCRDTree";
-import {Protocol, ProtocolKind} from "./protocol/Protocol";
+import {ProtocolKind} from "./protocol/Protocol";
 import {addProtocol} from "./protocol/addProtocol";
 import {addQueryProtocol, bootstrap} from "./protocol/QueryProtocol";
 
@@ -47,7 +47,7 @@ const initNetwork = async (from: CRDTreeTransport<unknown> = [],
 	const node = await newNode();
 	const connectedCrdt = new ConnectedCRDTree(node, new CRDTree(from));
 	addQueryProtocol(node, connectedCrdt);
-	addProtocol(protocolKind, node, connectedCrdt);
+	addProtocol(protocolKind, node, connectedCrdt, []);
 	await node.start();
 	return connectedCrdt;
 };

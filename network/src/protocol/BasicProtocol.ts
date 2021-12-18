@@ -2,7 +2,7 @@ import Libp2p from "libp2p";
 import {ConnectedCRDTree} from "../ConnectedCRDTree";
 import {Protocol, ProtocolKind} from "./Protocol";
 import {addSpecificProtocol, handle, send} from "./Common";
-import {ICRDTree} from "crdtree";
+import {CRDTree, CRDTreeTransport, ICRDTree} from "crdtree";
 
 const PROTOCOL_PREFIX = "/crdtree/bas";
 
@@ -16,6 +16,7 @@ const protocol: Protocol = {
 	},
 	listRefs: (userCRDT: ICRDTree): string[] => userCRDT.listRefs(),
 	subscribe: (): Promise<void> => Promise.resolve(),
+	initMeta: () => null,
 };
 
 const addBasicProtocol = addSpecificProtocol(PROTOCOL_PREFIX, protocol);

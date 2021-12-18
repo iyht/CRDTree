@@ -56,7 +56,7 @@ describe("Network", function () {
 		it("should be able to get bootstrapped", async () => {
 			crdtD = await connectTo(crdtC.addresses) as ConnectedCRDTree;
 			expect(crdtD.render).to.deep.equal(crdtA.render);
-			expect(crdtD.getProtocolKind()).to.deep.equal(ProtocolKind.RECOMMENDED);
+			expect(crdtD.protocolKind).to.deep.equal(ProtocolKind.RECOMMENDED);
 		});
 
 		it("should be possible to stop a node", async () => {
