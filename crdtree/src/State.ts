@@ -28,7 +28,7 @@ export default class State<T = any> {
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
-		this.branches = new Map();
+		this.branches = new Map([[ROOT, new Map()]]);
 		this._seen = new Set<ID>();
 		this.clock = 0;
 		this.stored = [];

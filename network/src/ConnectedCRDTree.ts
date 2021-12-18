@@ -5,6 +5,7 @@ import {baseProtocol, Protocol, ProtocolKind} from "./protocol/Protocol";
 
 interface IConnectedCRDTree<T = any> extends ICRDTree {
 
+	id: string;
 	addresses: string[];
 
 	onUpdate(callback: (render) => void): void;
@@ -25,10 +26,13 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		});
 	}
 
+	public get id(): string {
+		return this.node.peerId.toB58String();
+	}
+
 	public get addresses(): string[] {
-		const peerId = this.node.peerId.toB58String();
 		return this.node.transportManager.getAddrs()
-			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
+			.map((addr) => `${addr.toString()}/p2p/${this.id}`);
 	}
 
 	public setProtocol(protocol: Protocol, meta: ICRDTree): void {
@@ -94,17 +98,21 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}, 200);
 
 	public checkout(ref: string): void {
-		this.protocol.subscribe(ref, this.meta);
+		this.protocol.subscribe(this.id, ref, this.meta);
+		// .then(() => {
+			// TODO query for the data
+		// });
 		return this.crdt.checkout(ref);
 	}
 
 	public fork(name?: string): string {
 		const ref = this.crdt.fork(name);
-		this.protocol.subscribe(ref, this.meta);
+		this.protocol.subscribe(this.id, ref, this.meta);
 		return ref;
 	}
 
 	public join(ref: string): void {
+		// TODO tell the metadata that there was a join
 		return this.crdt.join(ref);
 	}
 

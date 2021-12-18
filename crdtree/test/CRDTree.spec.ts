@@ -650,6 +650,10 @@ describe("CRDTree", () => {
 				expect(new CRDTree()).to.be.on(tree.ref);
 			});
 
+			it("should have the main branch listed before commits are made", () => {
+				expect(new CRDTree().listRefs()).to.have.length(1);
+			});
+
 			it("should be able to fork", () => {
 				const ref = tree.fork();
 				expect(ref).to.exist;
