@@ -59,7 +59,8 @@ export default class State<T = any> {
 			// this.updateClock(newlyRelevantToThisBranch);
 			this.reapply(this.collect());
 		}
-		return addingToThisBranch;
+
+		return this.findRelevantBranches(newlyRelevantToThisBranch);
 	}
 
 	public newCollect(changes: BackendChange[]): BackendChange[] {
@@ -70,6 +71,21 @@ export default class State<T = any> {
 				return [change, ...recurrence.values()].filter((change) => !this.seen(change));
 			} else {
 				return change;
+			}
+		});
+	}
+
+	private findRelevantBranches(changes: BackendChange[]): {branchesAffected: Set<string>, backendChange: BackendChange}[] {
+		return changes.flatMap((change: BackendChange) => {
+			const {action} = change;
+			if (isFork(action) || isJoin(action)) {
+				const newbranches = this.findRelevantBranchesImpl(action.from, action.after);
+				const oldbranches = this.findRelevantBranchesImpl(change.branch, toID(change));
+				oldbranches.forEach(branch => newbranches.add(branch));
+				return {branchesAffected: newbranches, backendChange: change};
+			} else {
+				const newbranches = this.findRelevantBranchesImpl(change.branch, toID(change));
+				return {branchesAffected: newbranches, backendChange: change};
 			}
 		});
 	}
@@ -105,7 +121,7 @@ export default class State<T = any> {
 				return true;
 			}
 			const changeID = toID(change);
-			return changeID === after || nameLt(toID(change), after)
+			return changeID === after || nameLt(toID(change), after)  // on this branch, and before the point we care about
 		});
 		const backendChangeOutput = new Map<ID, BackendChange>();
 		relevantChanges.forEach((change) => {
@@ -118,6 +134,28 @@ export default class State<T = any> {
 			backendChangeOutput.set(toID(change), change);
 		});
 		return backendChangeOutput;
+	}
+
+	private findRelevantBranchesImpl(ref: string, after?: ID): Set<string> {
+		const {stored, seen} = this.branches.get(ref) ?? {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()};
+		const relevantChanges = [...stored.values(), ...seen.values()].filter((change) => {
+			if (!after) {
+				return true;
+			}
+			const changeID = toID(change);
+			return changeID === after || nameLt(after, toID(change))  // on this branch, and before the point we care about
+		});
+		let relevantBranchesOutput = new Set<string>(ref);
+		relevantChanges.forEach((change) => {
+			const {action} = change;
+			if (isFork(action) || isJoin(action)) {  // should never be fork though
+				const recurrence = this.findRelevantBranchesImpl(action.from, action.after);
+				recurrence.forEach((value) => {
+					relevantBranchesOutput.add(value);
+				});
+			}
+		});
+		return relevantBranchesOutput;
 	}
 
 	public checkout(ref: string): void {

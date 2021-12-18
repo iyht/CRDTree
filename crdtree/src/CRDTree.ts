@@ -30,11 +30,9 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 
 	private insertChanges(changes: Change[]): void {
 		const toCallback = this.state.addChanges(changes);
-		const backendChanges = toCallback.backendChanges;
-		const branchesAffected = toCallback.branchesAffected;
-		if (backendChanges.length > 0) {
+		if (toCallback.length > 0) {
 			this.callbacks.forEach((callback) =>
-				setImmediate(callback, branchesAffected, backendChanges));
+				setImmediate(callback, toCallback));
 		}
 	}
 
