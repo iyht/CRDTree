@@ -37,7 +37,7 @@ export default class State<T = any> {
 		this.addChanges(changes);
 	}
 
-	public addChanges(changes: Change[]): BackendChange[] {
+	public addChanges(changes: Change[]): {branchesAffected: string[][], backendChanges: BackendChange[]} {
 		// changes.forEach(ensureBackendChange);
 		for (const change of changes) {
 			ensureBackendChange(change);
