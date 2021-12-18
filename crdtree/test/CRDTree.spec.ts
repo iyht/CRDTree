@@ -656,7 +656,7 @@ describe("CRDTree", () => {
 				insertInOrderCharsAt(crdtB, 1);
 
 				expect(crdtA).to.merge(crdtB);
-				expect(crdtA.render().join("")).to.equal(`${text}@${text}`);
+				expect(crdtA.render.join("")).to.equal(`${text}@${text}`);
 			});
 		});
 	});
@@ -669,10 +669,10 @@ describe("CRDTree", () => {
 			beforeEach(() => tree = new CRDTree());
 
 			it("should have a ref for the default branch", () =>
-				expect(tree.ref()).to.exist);
+				expect(tree.ref).to.exist);
 
 			it("should always use the same default ref", () => {
-				expect(new CRDTree()).to.be.on(tree.ref());
+				expect(new CRDTree()).to.be.on(tree.ref);
 			});
 
 			it("should be able to fork", () => {
@@ -689,7 +689,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should be able to fork multiple times from the same place in time", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				tree.assign([], []);
 				const forkA = tree.fork();
 				tree.insert([0], 1);
@@ -711,7 +711,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should be able to check out an existing branch using a ref", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				tree.assign([], {});
 				expect(tree).to.render({});
 				const feature = tree.fork();
@@ -725,7 +725,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should be able to join a branch back into the default branch", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				tree.assign([], {});
 				const feature = tree.fork();
 				tree.assign(["foo"], "change");
@@ -736,7 +736,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should be able to join a branch to a different branch", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				tree.assign([], {});
 				const featureA = tree.fork();
 				tree.checkout(main);
@@ -753,7 +753,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should be able to continue committing to a branch which has been joined", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				tree.assign([], {});
 				const feature = tree.fork();
 				tree.assign(["foo"], "change");
@@ -768,7 +768,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should support checking out a branch that you're already on", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				expect(tree).to.be.on(main);
 				tree.checkout(main);
 				expect(tree).to.be.on(main);
@@ -780,7 +780,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should support joining into the same branch", () => {
-				const main = tree.ref();
+				const main = tree.ref;
 				tree.assign([], {});
 				const feature = tree.fork();
 				tree.assign(["foo"], "bar");
@@ -804,7 +804,7 @@ describe("CRDTree", () => {
 			});
 
 			it("should list fork created on another node", () => {
-				const main = treeA.ref();
+				const main = treeA.ref;
 				const fork = treeA.fork();
 				treeB.merge(treeA);
 				expect(treeB.listRefs()).to.include(fork);
@@ -880,7 +880,7 @@ describe("CRDTree", () => {
 				it("should keep the correct dependencies across forks", async () => {
 					// setup
 					const updates = [];
-					const main = treeA.ref();
+					const main = treeA.ref;
 					treeA.onUpdate((update) => updates.push(...update));
 
 					treeA.assign(["foo"], {}); // On main branch
