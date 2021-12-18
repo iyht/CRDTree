@@ -623,6 +623,7 @@ describe("CRDTree", () => {
 			it("should call onUpdate when merging in new remote commits forked to other branches", async () => {
 				const crdtA = new CRDTree();
 				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
 				let allUpdates = []
 				crdtB.onUpdate((updates) => {
 					allUpdates.push(...updates);
@@ -630,7 +631,8 @@ describe("CRDTree", () => {
 				crdtA.assign([], {});
 				crdtA.fork("branch_a");
 				crdtA.assign(["foo"], "bar");
-				crdtB.checkout("branch_a");
+				crdtA.checkout(main);
+				crdtB.join("branch_a");
 				crdtB.merge(crdtA.serialize());
 				await new Promise((resolve) => setTimeout(resolve, 300));
 				expect(allUpdates).to.have.length(3);
@@ -684,6 +686,7 @@ describe("CRDTree", () => {
 					allUpdates.push(...updates);
 				});
 				crdtA.fork("branch_a");
+				crdtA.assign([], {});
 				crdtA.fork("branch_b");
 				crdtA.assign([], {});
 				crdtA.checkout("branch_a");
@@ -696,7 +699,7 @@ describe("CRDTree", () => {
 				crdtB.merge(crdtA.serialize());
 				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 				await sleep(300);
-				expect(allUpdates).to.have.length(9);
+				expect(allUpdates).to.have.length(10);
 			});
 		});
 
