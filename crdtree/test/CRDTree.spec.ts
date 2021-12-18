@@ -658,6 +658,23 @@ describe("CRDTree", () => {
 				expect(allUpdates).to.have.length(4);
 			});
 
+			it("should call onUpdate with newly relevant forks and joins and no other changes", async () => {
+				const crdtA = new CRDTree();
+				const crdtB = new CRDTree(crdtA.serialize(), "B");
+				const main = crdtA.ref;
+				let allUpdates = []
+				crdtB.onUpdate((updates) => {
+					allUpdates.push(...updates);
+				});
+				crdtA.fork("branch_a");
+				crdtA.checkout(main);
+				crdtA.join("branch_a");
+				crdtB.merge(crdtA.serialize());
+				const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+				await sleep(300);
+				expect(allUpdates).to.have.length(2);
+			});
+
 			it("should call onUpdate with newly relevant commits", async () => {
 				const crdtA = new CRDTree();
 				const crdtB = new CRDTree(crdtA.serialize(), "B");
