@@ -57,7 +57,7 @@ export default class State<T = any> {
 			// this.updateClock(newlyRelevantToThisBranch);
 			this.reapply(this.collect());
 		}
-		return addingToThisBranch;
+		return newlyRelevantToThisBranch;
 	}
 
 	public newCollect(changes: BackendChange[]): BackendChange[] {
