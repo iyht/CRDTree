@@ -54,9 +54,11 @@ const addSubscriber = (node: Libp2p, id: string, ref: string, meta: ICRDTree) =>
 		const otherSubs = Object.keys(render.subscribers[ref].ids);
 		render.subscribers[ref].ids[id] = true;
 		meta.assign(["subscribers", ref, "ids", id], render.subscribers[ref].ids[id]);
-		if (otherSubs.length > 0) {
+		if (otherSubs.length > 0) { // deffo a checkout
 			requestHistoryAgain(node, ref, otherSubs);
 		}
+		// else deffo fork or a side-channel checkout and we're not up to date yet
+		// TODO really there should be a different function for the other case (a fork, rather than a checkout)
 	}
 };
 
@@ -80,12 +82,14 @@ const saveJoin = (meta: ICRDTree) => (change: BackendChange) => {
 	const join = change.action as Join;
 	const originator = join.from;
 	const after = join.after;
-	const render = ensureSubscribersObjectForRef(originator, meta);
-	if (!render.subscribers[originator].joins[joinedInto] ||
-		(render.subscribers[originator].joins[joinedInto] !== after &&
-			nameLt(render.subscribers[originator].joins[joinedInto], after))) {
-		render.subscribers[originator].joins[joinedInto] = after;
-		meta.assign(["subscribers", originator, "joins", after], render.subscribers[originator].joins[after]);
+	if (join.after) {
+		const render = ensureSubscribersObjectForRef(originator, meta);
+		if (!render.subscribers[originator].joins[joinedInto] ||
+			(render.subscribers[originator].joins[joinedInto] !== after &&
+				nameLt(render.subscribers[originator].joins[joinedInto], after))) {
+			render.subscribers[originator].joins[joinedInto] = after;
+			meta.assign(["subscribers", originator, "joins", joinedInto], render.subscribers[originator].joins[joinedInto]);
+		}
 	}
 };
 
@@ -123,7 +127,7 @@ const protocol: Protocol = {
 		});
 	},
 	listRefs(_: ICRDTree, meta: ICRDTree): string[] {
-		const refs = meta.render?.refs ?? {ROOT};
+		const refs = meta.render?.subscribers ?? {ROOT};
 		return Object.keys(refs);
 	},
 	subscribe(node: Libp2p, id: string, ref: string, meta: ICRDTree): void {

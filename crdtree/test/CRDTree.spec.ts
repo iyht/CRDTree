@@ -782,6 +782,14 @@ describe("CRDTree", () => {
 				tree.checkout(main);
 				expect(tree).to.render({});
 			});
+
+			it("should act reasonably when joining a branch that does not exist", () => {
+				tree.assign([], "root");
+				tree.join("DNE");
+				expect(tree).to.render("root");
+				tree.assign([], "new root");
+				expect(tree).to.render("new root");
+			});
 		});
 
 		describe("onUpdate with forks and joins", () => {

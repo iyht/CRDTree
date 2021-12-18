@@ -96,7 +96,7 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 			this.pendingUpdates.push(...updatesToBroadcast); // hopefully will get handled later
 			console.warn("Updates couldn't get published. Will publish later. Reason:", err);
 		}
-	}, 200);
+	}, 50);
 
 	public checkout(ref: string): void {
 		this.protocol.subscribe(this.node, this.id, ref, this.meta);
@@ -110,7 +110,11 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}
 
 	public join(ref: string): void {
-		return this.crdt.join(ref);
+		if (this.crdt.listRefs().includes(ref)) {
+			return this.crdt.join(ref);
+		} else {
+			throw new EvalError("Please checkout this branch first as you do not have a local copy");
+		}
 	}
 
 	public listRefs(): string[] {

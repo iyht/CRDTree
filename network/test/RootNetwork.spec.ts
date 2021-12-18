@@ -4,7 +4,7 @@ import {ConnectedCRDTree, IConnectedCRDTree} from "../src/ConnectedCRDTree";
 import {sleep} from "./util";
 import {ProtocolKind} from "../src/protocol/Protocol";
 
-describe("Network", function () {
+describe("Network", () => {
 
 	let crdtA: IConnectedCRDTree;
 	let crdtB: IConnectedCRDTree;
@@ -18,17 +18,17 @@ describe("Network", function () {
 
 	describe("Network setup", () => {
 		it("should be able to init a network", async () => {
-			crdtA = await initNetwork();
+			crdtA = await initNetwork([], "A");
 			expect(crdtA.addresses).to.not.be.empty;
 		});
 
 		it("should be able to join a network", async () => {
-			crdtB = await connectTo(crdtA.addresses);
+			crdtB = await connectTo(crdtA.addresses, "B");
 			expect(crdtB.addresses).to.not.be.empty;
 		});
 
 		it("should be able to join a network from non-originator node", async () => {
-			crdtC = await connectTo(crdtB.addresses);
+			crdtC = await connectTo(crdtB.addresses, "C");
 			expect(crdtC.addresses).to.not.be.empty;
 		});
 	});
@@ -37,7 +37,7 @@ describe("Network", function () {
 		it("should have changes move to other nodes", async () => {
 			crdtA.assign([], "foo");
 			expect(crdtA.render).to.deep.equal("foo");
-			await sleep(500);
+			await sleep(100);
 			expect(crdtB.render).to.deep.equal("foo");
 			expect(crdtC.render).to.deep.equal("foo");
 		});
@@ -45,7 +45,7 @@ describe("Network", function () {
 		it("should have changes go back to the initial node", async () => {
 			crdtB.assign([], "bar");
 			expect(crdtB.render).to.deep.equal("bar");
-			await sleep(500);
+			await sleep(100);
 			expect(crdtA.render).to.deep.equal("bar");
 			expect(crdtC.render).to.deep.equal("bar");
 		});
@@ -61,6 +61,42 @@ describe("Network", function () {
 
 		it("should be possible to stop a node", async () => {
 			await crdtD.stop();
+		});
+	});
+
+	describe("CRDTree", () => {
+		it("should be able to checkout something that you were not following", async () => {
+			const change = "MADE ON BRANCH A";
+			crdtA.fork("A");
+			crdtA.noop();
+			crdtA.assign([], change);
+			crdtA.noop();
+
+			await sleep(100);
+			expect(crdtB.render).to.deep.equal("bar");
+			expect(crdtB.listRefs()).includes("A");
+			crdtB.checkout("A");
+			await sleep(100);
+			expect(crdtB.render).to.deep.equal(change);
+		});
+
+		it("should not be able to join something that you were not following", async () => {
+			const change = "MADE ON BRANCH A PRIME";
+			crdtA.fork("A'");
+			crdtA.noop();
+			crdtA.assign([], change);
+			crdtA.noop();
+
+			await sleep(100);
+			expect(crdtA.render).to.equal(change);
+			expect(crdtB.render).to.not.equal(change);
+			expect(crdtB.listRefs()).includes("A'");
+			expect(() => crdtB.join("A'")).to.throw(Error);
+			crdtB.checkout("A'");
+			crdtB.checkout("A");
+			await sleep(100);
+			crdtB.join("A'");
+			expect(crdtB.render).to.deep.equal(change);
 		});
 	});
 });
