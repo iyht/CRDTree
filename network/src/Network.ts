@@ -8,9 +8,9 @@ import MulticastDNS from "libp2p-mdns";
 import Bootstrap from "libp2p-bootstrap";
 
 import {ConnectedCRDTree, IConnectedCRDTree} from "./ConnectedCRDTree";
-import * as RP from "./protocol/RecommendedProtocol";
-import * as QP from "./protocol/QueryProtocol";
 import {ProtocolType} from "./protocol/ProtocolType";
+import {addProtocol} from "./protocol/addProtocol";
+import {addQueryProtocol, bootstrap} from "./protocol/QueryProtocol";
 
 const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 	Libp2p.create({
@@ -42,19 +42,11 @@ const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 		}
 	});
 
-const addProtocol = (type: ProtocolType, node: Libp2p, crdt: ConnectedCRDTree) => {
-	if (type === ProtocolType.RECOMMENDED) {
-		RP.addProtocol(node, crdt);
-	} else {
-		throw new Error("NOT IMPLEMENTED");
-	}
-}
-
 const initNetwork = async (from: CRDTreeTransport<unknown> = [],
 						   protocolType: ProtocolType = ProtocolType.RECOMMENDED): Promise<IConnectedCRDTree> => {
 	const node = await newNode();
 	const connectedCrdt = new ConnectedCRDTree(node, new CRDTree(from));
-	QP.addProtocol(node, connectedCrdt);
+	addQueryProtocol(node, connectedCrdt);
 	addProtocol(protocolType, node, connectedCrdt);
 	await node.start();
 	return connectedCrdt;
@@ -68,7 +60,7 @@ const connectTo = async (knownPeers: string[]): Promise<IConnectedCRDTree> => {
 
 	return new Promise((resolve) => {
 		node.connectionManager.once('peer:connect', async (connection: Connection) => {
-			await QP.bootstrap(node, connectedCrdt, connection);
+			await bootstrap(node, connectedCrdt, connection);
 			return resolve(connectedCrdt);
 		});
 		return node.start();

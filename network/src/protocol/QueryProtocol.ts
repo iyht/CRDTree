@@ -1,10 +1,9 @@
-import Libp2p, {Connection, MuxedStream} from "libp2p";
+import Libp2p, {Connection, HandlerProps, MuxedStream} from "libp2p";
 import pipe from "it-pipe";
 import {ProtocolType} from "./ProtocolType";
 import {CRDTreeTransport} from "crdtree";
 import {ConnectedCRDTree} from "../ConnectedCRDTree";
-
-import * as RP from "./RecommendedProtocol";
+import {addProtocol} from "./addProtocol";
 
 const PROTOCOL_PREFIX = "/crdtree/query";
 
@@ -37,8 +36,8 @@ const requestHistoryAgain = (node: Libp2p) => {
 
 };
 
-const handleRequest = (crdt: ConnectedCRDTree) => async ({stream, connection}: {stream: MuxedStream, connection: Connection}) => {
-	try {
+const handleRequest = (crdt: ConnectedCRDTree) =>
+	async ({stream, connection}: HandlerProps) => {
 		await pipe(stream, async (source) => {
 			for await (const message of source) {
 				const query: QueryMessage = JSON.parse(message.toString());
@@ -53,13 +52,10 @@ const handleRequest = (crdt: ConnectedCRDTree) => async ({stream, connection}: {
 			}
 		});
 		await pipe([], stream);
-	} catch (err) {
-		// TODO
-	}
-};
+	};
 
-const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) => async ({stream, connection}: {stream: MuxedStream, connection: Connection}) => {
-	try {
+const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) =>
+	async ({stream, connection}: HandlerProps) => {
 		await pipe(stream, async (source) => {
 			for await (const message of source) {
 				const query: QueryMessage = JSON.parse(message.toString());
@@ -70,11 +66,7 @@ const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) => async 
 							requestHistoryAgain(node);
 						}
 					} else {
-						if (protocol === ProtocolType.RECOMMENDED) {
-							RP.addProtocol(node, crdt);
-						} else if (protocol === ProtocolType.BASIC) {
-							// TODO
-						}
+						addProtocol(protocol, node, crdt);
 						crdt.merge(history ?? []);
 						resolve();
 					}
@@ -85,33 +77,23 @@ const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) => async 
 			}
 		});
 		await pipe([], stream);
-	} catch (err) {
-		// TODO
-	}
-};
+	};
 
-const send = async (message: QueryMessage, stream: MuxedStream) => {
-	try {
-		await pipe([Buffer.from(JSON.stringify(message))], stream);
-	} catch (err) {
-		// TODO
-	}
-};
+const send = (message: QueryMessage, stream: MuxedStream) =>
+	pipe([Buffer.from(JSON.stringify(message))], stream);
 
-const addProtocol = (node: Libp2p, crdt: ConnectedCRDTree): void => {
+const addQueryProtocol = (node: Libp2p, crdt: ConnectedCRDTree): void =>
 	node.handle(PROTOCOL_PREFIX, handleRequest(crdt));
-};
 
-const bootstrap = async (node: Libp2p, crdt: ConnectedCRDTree, connection: Connection): Promise<void> => {
-	return new Promise((resolve) => {
+const bootstrap = async (node: Libp2p, crdt: ConnectedCRDTree, connection: Connection): Promise<void> =>
+	new Promise((resolve) => {
 		const handler = handleResponse(node, crdt, () => {
 			node.unhandle(PROTOCOL_PREFIX);
-			addProtocol(node, crdt);
+			addQueryProtocol(node, crdt);
 			resolve();
 		});
 		node.handle(PROTOCOL_PREFIX, handler);
-		requestHistory(connection)
+		requestHistory(connection);
 	});
-};
 
-export {addProtocol, bootstrap};
+export {addQueryProtocol, bootstrap};

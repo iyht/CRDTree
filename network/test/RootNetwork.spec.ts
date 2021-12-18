@@ -1,10 +1,10 @@
 import {connectTo, initNetwork} from "../src/Network";
 import {expect} from "chai";
-import {IConnectedCRDTree} from "../src/ConnectedCRDTree";
+import {ConnectedCRDTree, IConnectedCRDTree} from "../src/ConnectedCRDTree";
 import {sleep} from "./util";
+import {ProtocolType} from "../src/protocol/ProtocolType";
 
 describe("Network", function () {
-	this.timeout(10000);
 
 	let crdtA: IConnectedCRDTree;
 	let crdtB: IConnectedCRDTree;
@@ -48,6 +48,19 @@ describe("Network", function () {
 			await sleep(500);
 			expect(crdtA.render).to.deep.equal("bar");
 			expect(crdtC.render).to.deep.equal("bar");
+		});
+	});
+
+	describe("Joining and leaving", () => {
+		let crdtD: ConnectedCRDTree;
+		it("should be able to get bootstrapped", async () => {
+			crdtD = await connectTo(crdtC.addresses) as ConnectedCRDTree;
+			expect(crdtD.render).to.deep.equal(crdtA.render);
+			expect(crdtD.getProtocolType()).to.deep.equal(ProtocolType.RECOMMENDED);
+		});
+
+		it("should be possible to stop a node", async () => {
+			await crdtD.stop();
 		});
 	});
 });

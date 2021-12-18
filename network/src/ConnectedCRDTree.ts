@@ -63,8 +63,14 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	public async stop(): Promise<void> {
 		Object.keys(this)
 			.filter((key) => this[key] instanceof Function)
-			.forEach((key) => this[key] = () => {
-				throw new Error("Cannot use a stopped CRDTree");
+			.forEach((key) => {
+				if (key === "stop") {
+					this[key] = () => Promise.resolve();
+				} else {
+					this[key] = function () {
+						throw new Error("Cannot use a stopped CRDTree");
+					}
+				}
 			});
 		// TODO something something... broadcast metadata details
 		await this.node.stop();
