@@ -42,11 +42,13 @@ export default class State<T = any> {
 		for (const change of changes) {
 			ensureBackendChange(change);
 		}
+		// brand new to this branch from remote
 		const addingToThisBranch = this.addChangesToBranches(changes as BackendChange[]);
 
 
 		// const branch = this.collect();
 		// const newToCurrentBranch = branch.filter((change) => !this.seen(change));
+		// results from backwards searching tree histories on top of new remote changes
 		const newlyRelevantToThisBranch = this.newCollect(addingToThisBranch).sort(changeSortCompare);
 
 
