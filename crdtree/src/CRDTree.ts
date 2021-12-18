@@ -8,7 +8,7 @@ import {assertSerializable} from "./Util";
 import {uuid} from "./UUID";
 
 export class CRDTree<T = any> implements ICRDTree<T> {
-	private readonly callbacks: Array<(branchesAffected: Set<string>, update: CRDTreeTransport<T>) => void>;
+	private readonly callbacks: Array<(updates: {branchesAffected: Set<string>, update: CRDTreeTransport<T>}[]) => void>;
 	private readonly state: State<T>;
 	private readonly pid: string;
 
@@ -109,7 +109,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		return this.state.render();
 	}
 
-	public onUpdate(callback: (branchesAffected: Set<string>, update: CRDTreeTransport<T>) => void): void {
+	public onUpdate(callback: (updates: {branchesAffected: Set<string>, update: CRDTreeTransport<T>}[]) => void): void {
 		this.callbacks.push(callback);
 	}
 
