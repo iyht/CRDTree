@@ -230,7 +230,7 @@ export default class State<T = any> {
 	}
 
 	private applyChange(change: BackendChange): void {
-		this.clock = change.clock;
+		// this.clock = change.clock;
 		const {action} = change;
 		if (isBackendAssignment(action)) {
 			this.applyAssignment(action);
