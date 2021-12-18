@@ -133,10 +133,6 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 	}
 
 	public join(ref: string): void {
-		if (ref == this.ref) {
-			this.noop();
-			return;
-		}
 		this.makeChange({
 			action: {
 				kind: ActionKind.JOIN,

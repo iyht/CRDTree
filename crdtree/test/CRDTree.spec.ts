@@ -969,7 +969,7 @@ describe("CRDTree", () => {
 					expect(treeA).to.render({foo: {foo: "bar"}}); // on fork
 					expect(treeB).to.render({}); // still on main branch
 
-					expect(updates).to.have.length(4);
+					expect(updates).to.have.length(4); // TODO union using objects possible problem????
 
 					treeB.merge([updates.pop()]); // treeA.assign(["foo", "foo"], "bar");
 					expect(treeB.listRefs()).to.include(fork);
