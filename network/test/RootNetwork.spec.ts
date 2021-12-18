@@ -4,7 +4,7 @@ import {ConnectedCRDTree, IConnectedCRDTree} from "../src/ConnectedCRDTree";
 import {sleep} from "./util";
 import {ProtocolKind} from "../src/protocol/Protocol";
 
-describe("Network", function () {
+describe("Network", () => {
 
 	let crdtA: IConnectedCRDTree;
 	let crdtB: IConnectedCRDTree;
@@ -61,6 +61,37 @@ describe("Network", function () {
 
 		it("should be possible to stop a node", async () => {
 			await crdtD.stop();
+		});
+	});
+
+	describe("CRDTree", () => {
+		it("should be able to checkout something that you were not following", async () => {
+			const change = "MADE ON BRANCH A";
+			crdtA.fork("A");
+			crdtA.noop();
+			crdtA.assign([], change);
+			crdtA.noop();
+
+			await sleep(400);
+			expect(crdtB.render).to.deep.equal("bar");
+			expect(crdtB.listRefs()).includes("A");
+			crdtB.checkout("A");
+			await sleep(400);
+			expect(crdtB.render).to.deep.equal(change);
+		});
+
+		it("should be able to join something that you were not following", async () => {
+			const change = "MADE ON BRANCH A PRIME";
+			crdtA.fork("A'");
+			crdtA.noop();
+			crdtA.assign([], change);
+			crdtA.noop();
+
+			await sleep(600);
+			expect(crdtB.listRefs()).includes("A'");
+			crdtB.join("A'");
+			await sleep(400);
+			expect(crdtB.render).to.deep.equal(change);
 		});
 	});
 });

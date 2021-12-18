@@ -123,7 +123,7 @@ const protocol: Protocol = {
 		});
 	},
 	listRefs(_: ICRDTree, meta: ICRDTree): string[] {
-		const refs = meta.render?.refs ?? {ROOT};
+		const refs = meta.render?.subscribers ?? {ROOT};
 		return Object.keys(refs);
 	},
 	subscribe(node: Libp2p, id: string, ref: string, meta: ICRDTree): void {
