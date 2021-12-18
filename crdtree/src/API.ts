@@ -7,9 +7,10 @@ export type Index = number | string;
 export type CRDTreeTransport<T> = BackendChange[]; // used for sending updates across the network
 
 export interface ICRDTree<T = any> {
-	render(): T;
+	render: T;
+	ref: string;
 
-	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
+	serialize(ref?: string): CRDTreeTransport<T>; // for when a new node joins the network
 	// returns affected forks
 	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): string[];
 
@@ -23,11 +24,9 @@ export interface ICRDTree<T = any> {
 
 	onUpdate(callback: (update: CRDTreeTransport<T>) => void): void;
 
-	ref(): string;
-
 	listRefs(): string[];
 
-	fork(): string;
+	fork(name?: string): string;
 
 	join(ref: string): void; // same fork is a no-op
 	checkout(ref: string): void;

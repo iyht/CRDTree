@@ -99,11 +99,11 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		});
 	}
 
-	public serialize(): CRDTreeTransport<T> {
-		return this.state.listChanges();
+	public serialize(ref?: string): CRDTreeTransport<T> {
+		return this.state.listChanges(ref);
 	}
 
-	public render(): T {
+	public get render(): T {
 		return this.state.render();
 	}
 
@@ -111,11 +111,11 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		this.callbacks.push(callback);
 	}
 
-	public fork(): string {
+	public fork(name?: string): string {
 		const from = this.state.ref();
 		const clock = this.state.next();
 		const dep = this.state.latest();
-		const branch = uuid();
+		const branch = name ?? uuid();
 		const {pid} = this;
 		this.state.checkout(branch); // VERY EXPENSIVE/WASTEFUL reapplication here lol
 		this.makeChange({
@@ -142,7 +142,7 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		});
 	}
 
-	public ref(): string {
+	public get ref(): string {
 		return this.state.ref();
 	}
 

@@ -5,14 +5,35 @@
 	"license": "MIT",
 	"dependencies": {
 		"crdtree": "file:../crdtree",
+		"debounce": "^1.2.1",
 		"express": "^4.17.1",
 		"network": "file:../network",
+		"open": "^8.4.0",
 		"ws": "^8.3.0"
 	},
 	"devDependencies": {
+		"@types/debounce": "^1.2.1",
 		"@types/express": "^4.17.13",
+		"@types/node": "^17.0.0",
 		"@types/ws": "^8.2.1",
+		"nodemon": "^2.0.15",
 		"ts-node": "^10.4.0",
 		"typescript": "^4.5.2"
+	},
+	"scripts": {
+		"build": "tsc",
+		"start": "node --require ts-node/register server.ts",
+		"watch": "nodemon"
+	},
+	"nodemonConfig": {
+		"ignore": [
+			".git",
+			"node_modules"
+		],
+		"watch": [
+			"."
+		],
+		"exec": "yarn start",
+		"ext": ".ts"
 	}
 }

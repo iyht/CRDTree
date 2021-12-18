@@ -1,6 +1,6 @@
 import {ID, Index} from "./API";
 import {ROOT, ROOT_PARENT} from "./Constants";
-import {BackendChange, Change, changeSortCompare, ensureBackendChange, toID} from "./Change";
+import {BackendChange, Change, changeLt, changeSortCompare, ensureBackendChange, toID} from "./Change";
 import {
 	BackendAssignment,
 	BackendInsertion,
@@ -23,68 +23,99 @@ export default class State<T = any> {
 	private _seen: Set<ID>;
 	private _ref: string;
 	private clock: number;
-	private stored: BackendChange[];
-	private readonly branches: Map<string, Map<ID, BackendChange>>;
+	private readonly branches: Map<string, {
+		stored: Map<ID, BackendChange>,
+		seen: Map<ID, BackendChange>
+	}>;
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
-		this.branches = new Map();
+		this.branches = new Map([
+			[ROOT, {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()}]
+		]);
 		this._seen = new Set<ID>();
 		this.clock = 0;
-		this.stored = [];
 		this.reinitObjects();
 		this.addChanges(changes);
 	}
 
 	public addChanges(changes: Change[]): BackendChange[] {
-		const backendChanges = changes.map(ensureBackendChange);
-		const newToThisNode = this.addChangesToBranches(backendChanges);
-		const branch = this.collect();
-		const newToCurrentBranch = branch.filter((change) => !this.seen(change));
-		if (newToCurrentBranch.length > 0 && newToCurrentBranch[0].clock > this.clock) {
-			this.updateClock(branch); // Has to be in branch bc clock is checked above in predicate
-			this.applyChanges(newToCurrentBranch);
-		} else if (newToCurrentBranch.length > 0) {
-			this.updateClock(branch);
-			this.reapply(branch);
+		// changes.forEach(ensureBackendChange);
+		for (const change of changes) {
+			ensureBackendChange(change);
 		}
-		return newToThisNode;
+		const addingToThisBranch = this.addChangesToBranches(changes as BackendChange[]);
+
+
+		// const branch = this.collect();
+		// const newToCurrentBranch = branch.filter((change) => !this.seen(change));
+		let newlyRelevantToThisBranch = this.newCollect(addingToThisBranch);
+		newlyRelevantToThisBranch = newlyRelevantToThisBranch.filter(
+			(element, i) => i === newlyRelevantToThisBranch.indexOf(element)
+		).sort(changeSortCompare);
+
+		if (newlyRelevantToThisBranch.length > 0 && newlyRelevantToThisBranch[0].clock > this.clock) {
+			this.updateClock(newlyRelevantToThisBranch); // Has to be in branch bc clock is checked above in predicate
+			this.applyChanges(newlyRelevantToThisBranch);
+		} else if (newlyRelevantToThisBranch.length > 0) {
+			// this.updateClock(newlyRelevantToThisBranch);
+			this.reapply(this.collect());
+		}
+		return newlyRelevantToThisBranch;
+	}
+
+	public newCollect(changes: BackendChange[]): BackendChange[] {
+		const backendChangeOutput = new Map<ID, BackendChange>();
+		changes.forEach((change: BackendChange) => {
+			const {action} = change;
+			if (isFork(action) || isJoin(action)) {
+				const recurrence = this.collectImpl(action.from, action.after);
+				recurrence.forEach((value, key) =>
+					backendChangeOutput.set(key, value));
+			}
+			backendChangeOutput.set(toID(change), change);
+		});
+
+		return [...backendChangeOutput.values()].filter((change) => !this.seen(change));
 	}
 
 	private updateClock(changes: Change[]): void {
-		this.clock = changes[changes.length - 1].clock;
+		if (changes[changes.length - 1].clock > this.clock) {
+			this.clock = changes[changes.length - 1].clock;
+		}
 	}
 
 	private addChangesToBranches(changes: BackendChange[]): BackendChange[] {
-		return changes.filter((change) => {
+		changes.forEach((change) => {
 			const {branch} = change;
 			if (!this.branches.has(branch)) {
-				this.branches.set(branch, new Map<ID, BackendChange>());
+				this.branches.set(branch, {stored: new Map<ID, BackendChange>(), seen: new Map<ID, BackendChange>()});
 			}
 			const incomingID = toID(change);
-			if (!this.branches.get(branch).has(incomingID)) {
-				this.branches.get(branch).set(incomingID, change);
-				return true;
-			} else {
-				return false;
+			if (!this.branches.get(branch).stored.has(incomingID) && !this.branches.get(branch).seen.has(incomingID)) {
+				this.branches.get(branch).stored.set(incomingID, change);
 			}
 		});
+		return [...(this.branches.get(this.ref())?.stored?.values() ?? [])];
 	}
 
 	private collect(ref?: string): BackendChange[] {
-		const changes = this.collectImpl(ref ?? this.ref());
+		const changes = this.collectImpl(ref ?? this.ref(), this.latest(ref ?? this.ref()));
 		const listChanges = Array.from(changes.values());
 		return listChanges.sort(changeSortCompare);
 	}
 
-	private collectImpl(ref: string, after?: ID): Map<ID, BackendChange> {
-		const changes = this.branches.get(ref) ?? new Map<ID, BackendChange>();
-		const relevantChanges = Array.from(changes.values()).filter((change) => {
-			if (!after) {
-				return true;
-			}
+	private collectImpl(ref: string, after: ID): Map<ID, BackendChange> {
+		const {stored, seen} = this.branches.get(ref) ?? {
+			stored: new Map<ID, BackendChange>(),
+			seen: new Map<ID, BackendChange>()
+		};
+		const relevantChanges = [...stored.values(), ...seen.values()].filter((change) => {
 			const changeID = toID(change);
-			return changeID === after || nameLt(toID(change), after)
+			if (!after) {
+				return false;
+			}
+			return changeID === after || nameLt(changeID, after)
 		});
 		const backendChangeOutput = new Map<ID, BackendChange>();
 		relevantChanges.forEach((change) => {
@@ -101,35 +132,65 @@ export default class State<T = any> {
 
 	public checkout(ref: string): void {
 		this._ref = ref;
-		this._seen = new Set();
-		this.clock = 0;
-		this.stored = [];
+		// this._seen = new Set();
+		this.branches.forEach(({seen, stored}) => {
+			seen.forEach((value, id) => {
+				stored.set(id, value);
+				seen.delete(id);
+			});
+		})
+		// this.clock = 0;
 		const branch = this.collect();
 		this.reapply(branch);
 	}
 
 	private seen(change: Change | ID): boolean {
+		// const id: ID = typeof change === "string" ? change : toID(change);
+		// return this._seen.has(id);
+
 		const id: ID = typeof change === "string" ? change : toID(change);
-		return this._seen.has(id);
+		const branch = id.split("@")[1];
+		return this.branches.get(branch).seen.has(id);
 	}
 
-	private witness(changes: Change[]): void {
-		changes.map(toID)
-			.forEach((id: ID) => this._seen.add(id));
+	private witness(changes: BackendChange[]): void {
+		changes.forEach((change) => {
+			const {branch} = change;
+			const {stored, seen} = this.branches.get(branch);
+			const id = toID(change);
+			seen.set(id, change);
+			stored.delete(id);
+		});
 	}
 
 	public next(): number {
-		return this.clock + 1;
+		this.clock++;
+		return this.clock;
 	}
 
 	public latest(ref?: string): ID | undefined {
 		ref ??= this.ref();
-		const branch = this.collect(ref);
-		if (branch.length > 0) {
-			return toID(branch[branch.length - 1]);
-		} else {
-			return undefined;
+		let last;
+		for (const change of this.branches.get(ref)?.seen?.values() ?? []) {
+			if (!last || changeLt(last, change)) {
+				last = change;
+			}
 		}
+		for (const change of this.branches.get(ref)?.stored?.values() ?? []) {
+			if (!last || changeLt(last, change)) {
+				last = change;
+			}
+		}
+		return last ? toID(last) : undefined;
+		// const branch = [
+		// 	...(this.branches.get(ref)?.seen?.values() ?? []),
+		// 	...(this.branches.get(ref)?.stored?.values() ?? [])
+		// ].sort(changeSortCompare);
+		// if (branch.length > 0) {
+		// 	return toID(branch[branch.length - 1]);
+		// } else {
+		// 	return undefined;
+		// }
 	}
 
 	public getElement(indices: Index[]): ID {
@@ -181,7 +242,7 @@ export default class State<T = any> {
 	}
 
 	private applyChange(change: BackendChange): void {
-		this.clock = change.clock;
+		// this.clock = change.clock;
 		const {action} = change;
 		if (isBackendAssignment(action)) {
 			this.applyAssignment(action);
@@ -261,12 +322,16 @@ export default class State<T = any> {
 		}
 	}
 
-	public listChanges(): BackendChange[] {
-		const changes = [];
-		for (const branch of this.branches.values()) {
-			changes.push(...branch.values());
+	public listChanges(ref?: string): BackendChange[] {
+		if (ref) {
+			return this.collect(ref);
+		} else {
+			const changes = [];
+			for (const {stored, seen} of this.branches.values()) {
+				changes.push(...stored.values(), ...seen.values());
+			}
+			return changes;
 		}
-		return changes;
 	}
 
 	public render(): T {
