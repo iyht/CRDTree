@@ -7,6 +7,8 @@ import {ConnectedCRDTree} from "../ConnectedCRDTree";
 import {BackendChange} from "crdtree/dist/src/Change";
 import {nameLt} from "crdtree/dist/src/Clock";
 import {ID} from "crdtree/dist/src/API";
+import {ROOT} from "crdtree/dist/src/Constants";
+import {requestHistoryAgain} from "./QueryProtocol";
 
 const PROTOCOL_PREFIX = "/crdtree/rec";
 const META_PREFIX = "/crdtree/meta";
@@ -44,11 +46,15 @@ const ensureSubscribersObjectForRef = (ref: string, meta: ICRDTree) => {
 	return render;
 }
 
-const addSubscriber = (id: string, ref: string, meta: ICRDTree) => {
+const addSubscriber = (node: Libp2p, id: string, ref: string, meta: ICRDTree) => {
 	const render = ensureSubscribersObjectForRef(ref, meta);
 	if (!render.subscribers[ref].ids[id]) {
+		const otherSubs = Object.keys(render.subscribers[ref].ids);
 		render.subscribers[ref].ids[id] = true;
 		meta.assign(["subscribers", ref, "ids", id], render.subscribers[ref].ids[id]);
+		if (otherSubs.length > 0) {
+			requestHistoryAgain(node, ref, otherSubs);
+		}
 	}
 };
 
@@ -105,8 +111,8 @@ const protocol: Protocol = {
 		const refs = meta.render?.refs ?? {};
 		return Object.keys(refs);
 	},
-	subscribe(id: string, ref: string, meta: ICRDTree): void {
-		addSubscriber(id, ref, meta);
+	subscribe(node: Libp2p, id: string, ref: string, meta: ICRDTree): void {
+		addSubscriber(node, id, ref, meta);
 	},
 	saveJoins(update: CRDTreeTransport<unknown>, meta: ICRDTree) {
 		saveJoins(update, meta);
@@ -115,6 +121,7 @@ const protocol: Protocol = {
 		const meta = new CRDTree(history);
 		node.handle(META_PREFIX, handle(meta));
 		meta.onUpdate((updates) => {
+			// TODO check to see if there are any new peers we want to connect to
 			node.peerStore.peers.forEach((peer) => {
 				node.connectionManager.get(peer.id)?.newStream([META_PREFIX])
 					.then(send(updates));
@@ -123,7 +130,7 @@ const protocol: Protocol = {
 		const pid = crdt.id;
 		const addresses = crdt.addresses;
 		addAddresses(pid, addresses, meta);
-		crdt.listRefs().forEach((ref) => addSubscriber(pid, ref, meta));
+		addSubscriber(node, pid, ROOT, meta);
 		saveJoins(crdt.serialize(), meta);
 		return meta;
 	},

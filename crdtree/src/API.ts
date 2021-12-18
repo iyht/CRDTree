@@ -10,7 +10,7 @@ export interface ICRDTree<T = any> {
 	render: T;
 	ref: string;
 
-	serialize(): CRDTreeTransport<T>; // for when a new node joins the network
+	serialize(ref?: string): CRDTreeTransport<T>; // for when a new node joins the network
 	// returns affected forks
 	merge(remote: ICRDTree<T> | CRDTreeTransport<T>): string[];
 

@@ -99,16 +99,13 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}, 200);
 
 	public checkout(ref: string): void {
-		this.protocol.subscribe(this.id, ref, this.meta);
-		// .then(() => {
-			// TODO query for the data
-		// });
+		this.protocol.subscribe(this.node, this.id, ref, this.meta);
 		return this.crdt.checkout(ref);
 	}
 
 	public fork(name?: string): string {
 		const ref = this.crdt.fork(name);
-		this.protocol.subscribe(this.id, ref, this.meta);
+		this.protocol.subscribe(this.node, this.id, ref, this.meta);
 		return ref;
 	}
 
@@ -117,7 +114,6 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}
 
 	public listRefs(): string[] {
-		// TODO needed for metadata setup
 		return this.protocol.listRefs(this.crdt, this.meta);
 	}
 
@@ -133,8 +129,8 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		return this.crdt.ref;
 	}
 
-	public serialize(): CRDTreeTransport<any> {
-		return this.crdt.serialize();
+	public serialize(ref?: string): CRDTreeTransport<any> {
+		return this.crdt.serialize(ref);
 	}
 }
 

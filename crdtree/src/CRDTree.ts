@@ -99,8 +99,8 @@ export class CRDTree<T = any> implements ICRDTree<T> {
 		});
 	}
 
-	public serialize(): CRDTreeTransport<T> {
-		return this.state.listChanges();
+	public serialize(ref?: string): CRDTreeTransport<T> {
+		return this.state.listChanges(ref);
 	}
 
 	public get render(): T {

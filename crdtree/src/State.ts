@@ -261,12 +261,16 @@ export default class State<T = any> {
 		}
 	}
 
-	public listChanges(): BackendChange[] {
-		const changes = [];
-		for (const branch of this.branches.values()) {
-			changes.push(...branch.values());
+	public listChanges(ref?: string): BackendChange[] {
+		if (ref) {
+			return this.collect(ref);
+		} else {
+			const changes = [];
+			for (const branch of this.branches.values()) {
+				changes.push(...branch.values());
+			}
+			return changes;
 		}
-		return changes;
 	}
 
 	public render(): T {

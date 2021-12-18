@@ -4,6 +4,7 @@ import {ProtocolKind} from "./Protocol";
 import {CRDTreeTransport} from "crdtree";
 import {ConnectedCRDTree} from "../ConnectedCRDTree";
 import {addProtocol} from "./addProtocol";
+import {ROOT} from "crdtree/dist/src/Constants";
 
 const PROTOCOL_PREFIX = "/crdtree/query";
 
@@ -14,30 +15,34 @@ enum QueryKind {
 
 interface QueryMessage {
 	kind: QueryKind;
+	branch?: string;
 	protocol?: ProtocolKind;
 	history?: CRDTreeTransport<unknown>;
 	metaHistory?: CRDTreeTransport<unknown>;
 }
 
-const requestHistory = (connection: Connection) => {
-	const message = {kind: QueryKind.BOOTSTRAP_REQ};
+const requestHistory = (connection: Connection, branch?: string) => {
+	branch ??= ROOT;
+	const message = {kind: QueryKind.BOOTSTRAP_REQ, branch};
 	connection.newStream([PROTOCOL_PREFIX]).then(({stream}) => send(message, stream));
 };
 
-const requestHistoryAgain = (node: Libp2p) => {
+const requestHistoryAgain = (node: Libp2p, branch?: string, otherSubs: string[] = []) => {
 	const peers = Array.from(node.peerStore.peers.values());
 	const peer = peers[Math.floor(Math.random() * peers.length)];
-	if (peer.protocols.includes(PROTOCOL_PREFIX)) {
+	if (peer.protocols.includes(PROTOCOL_PREFIX) &&
+		(otherSubs.length === 0 || otherSubs.includes(peer.id.toB58String()))) {
+
 		const connection = node.connectionManager.get(peer.id);
 		if (connection) {
-			return requestHistory(connection);
+			return requestHistory(connection, branch);
 		}
 	}
-	return requestHistoryAgain(node);
+	return requestHistoryAgain(node, branch);
 
 };
 
-const handleRequest = (crdt: ConnectedCRDTree) =>
+const handleQueryAfterBootstrapped = (crdt: ConnectedCRDTree) =>
 	async ({stream, connection}: HandlerProps) => {
 		await pipe(stream, async (source) => {
 			for await (const message of source) {
@@ -46,17 +51,19 @@ const handleRequest = (crdt: ConnectedCRDTree) =>
 					const queryMessage: QueryMessage = {
 						kind: QueryKind.BOOTSTRAP_RES,
 						protocol: crdt.protocolKind,
-						history: crdt.serialize(),
+						history: crdt.serialize(query.branch),
 						metaHistory: crdt.serializeProtocol(),
 					};
 					connection.newStream([PROTOCOL_PREFIX]).then(({stream}) => send(queryMessage, stream));
+				} else {
+					crdt.merge(query?.history ?? []);
 				}
 			}
 		});
 		await pipe([], stream);
 	};
 
-const handleResponse = (node: Libp2p, crdt: ConnectedCRDTree, resolve) =>
+const handleQueryBeforeBootstrapped = (node: Libp2p, crdt: ConnectedCRDTree, resolve) =>
 	async ({stream, connection}: HandlerProps) => {
 		await pipe(stream, async (source) => {
 			for await (const message of source) {
@@ -85,11 +92,11 @@ const send = (message: QueryMessage, stream: MuxedStream) =>
 	pipe([Buffer.from(JSON.stringify(message))], stream);
 
 const addQueryProtocol = (node: Libp2p, crdt: ConnectedCRDTree): void =>
-	node.handle(PROTOCOL_PREFIX, handleRequest(crdt));
+	node.handle(PROTOCOL_PREFIX, handleQueryAfterBootstrapped(crdt));
 
 const bootstrap = async (node: Libp2p, crdt: ConnectedCRDTree, connection: Connection): Promise<void> =>
 	new Promise((resolve) => {
-		const handler = handleResponse(node, crdt, () => {
+		const handler = handleQueryBeforeBootstrapped(node, crdt, () => {
 			node.unhandle(PROTOCOL_PREFIX);
 			addQueryProtocol(node, crdt);
 			resolve();
@@ -98,4 +105,4 @@ const bootstrap = async (node: Libp2p, crdt: ConnectedCRDTree, connection: Conne
 		requestHistory(connection);
 	});
 
-export {addQueryProtocol, bootstrap};
+export {addQueryProtocol, bootstrap, requestHistoryAgain};

@@ -10,7 +10,7 @@ enum ProtocolKind {
 interface Protocol {
 	kind: ProtocolKind;
 	broadcast(node: Libp2p, updates: any, meta: ICRDTree): Promise<void>;
-	subscribe(id: string, ref: string, meta: ICRDTree): void;
+	subscribe(node: Libp2p, id: string, ref: string, meta: ICRDTree): void;
 	listRefs(userCRDT: ICRDTree, meta: ICRDTree): string[];
 	initMeta(crdt: ConnectedCRDTree, node: Libp2p, history: CRDTreeTransport<any>): ICRDTree;
 	saveJoins(update: CRDTreeTransport<unknown>, meta: ICRDTree): void;
