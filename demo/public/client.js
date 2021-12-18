@@ -1,5 +1,6 @@
 const textarea = document.querySelector('textarea');
 const input = document.querySelector('#message');
+input.disabled = true;
 const name = document.querySelector('#name');
 const address = document.querySelector('h3');
 
@@ -26,6 +27,7 @@ webSocket.addEventListener('open', function(e) {
 			name.value = data.name;
 			address.textContent = `My address: ${data.addresses.pop()}`;
 			textarea.value = renderMessages(data.render);
+			input.disabled = !Array.isArray(data.render.messages);
 			textarea.scrollTop = textarea.scrollHeight;
 		}
 	});
