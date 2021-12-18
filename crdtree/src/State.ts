@@ -152,7 +152,8 @@ export default class State<T = any> {
 	}
 
 	public next(): number {
-		return this.clock + 1;
+		this.clock++;
+		return this.clock;
 	}
 
 	public latest(ref?: string): ID | undefined {
