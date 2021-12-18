@@ -9,6 +9,8 @@ import {nameLt} from "crdtree/dist/src/Clock";
 import {ID} from "crdtree/dist/src/API";
 import {ROOT} from "crdtree/dist/src/Constants";
 import {requestHistoryAgain} from "./QueryProtocol";
+import {Multiaddr} from "multiaddr";
+import PeerId from "peer-id";
 
 const PROTOCOL_PREFIX = "/crdtree/rec";
 const META_PREFIX = "/crdtree/meta";
@@ -92,6 +94,19 @@ const saveJoins = (update: CRDTreeTransport<any>, meta: ICRDTree) => {
 	joins.forEach(saveJoin(meta));
 };
 
+const discoverPeers = (node: Libp2p, meta: ICRDTree) => {
+	const peerAddresses = Object.entries(meta.render.addresses ?? {});
+	for (const [peerId, addresses] of peerAddresses) {
+		if (node.peerId.toB58String() !== peerId &&
+			!node.peerStore.peers.has(peerId) &&
+			(addresses as any).length > 0) {
+
+			node.dial(PeerId.createFromB58String(peerId)).catch(console.warn);
+			(addresses as any).forEach((address) => node.dial(new Multiaddr(address) as any).catch(console.warn));
+		}
+	}
+};
+
 const protocol: Protocol = {
 	kind: ProtocolKind.RECOMMENDED,
 	broadcast: async (node: Libp2p, updates: CRDTreeTransport<unknown>, meta: ICRDTree): Promise<void> => {
@@ -108,7 +123,7 @@ const protocol: Protocol = {
 		});
 	},
 	listRefs(_: ICRDTree, meta: ICRDTree): string[] {
-		const refs = meta.render?.refs ?? {};
+		const refs = meta.render?.refs ?? {ROOT};
 		return Object.keys(refs);
 	},
 	subscribe(node: Libp2p, id: string, ref: string, meta: ICRDTree): void {
@@ -121,7 +136,7 @@ const protocol: Protocol = {
 		const meta = new CRDTree(history);
 		node.handle(META_PREFIX, handle(meta));
 		meta.onUpdate((updates) => {
-			// TODO check to see if there are any new peers we want to connect to
+			discoverPeers(node, meta);
 			node.peerStore.peers.forEach((peer) => {
 				node.connectionManager.get(peer.id)?.newStream([META_PREFIX])
 					.then(send(updates));
