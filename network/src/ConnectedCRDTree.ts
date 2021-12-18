@@ -5,6 +5,7 @@ import {baseProtocol, Protocol, ProtocolKind} from "./protocol/Protocol";
 
 interface IConnectedCRDTree<T = any> extends ICRDTree {
 
+	id: string;
 	addresses: string[];
 
 	onUpdate(callback: (render) => void): void;
@@ -20,15 +21,19 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	constructor(private readonly node: Libp2p, private readonly crdt: ICRDTree) {
 		this.pendingUpdates = [];
 		this.crdt.onUpdate((update) => {
+			this.protocol.saveJoins(update, this.meta);
 			this.pendingUpdates.push(...update);
 			this.broadcast();
 		});
 	}
 
+	public get id(): string {
+		return this.node.peerId.toB58String();
+	}
+
 	public get addresses(): string[] {
-		const peerId = this.node.peerId.toB58String();
 		return this.node.transportManager.getAddrs()
-			.map((addr) => `${addr.toString()}/p2p/${peerId}`);
+			.map((addr) => `${addr.toString()}/p2p/${this.id}`);
 	}
 
 	public setProtocol(protocol: Protocol, meta: ICRDTree): void {
@@ -94,13 +99,13 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}, 200);
 
 	public checkout(ref: string): void {
-		this.protocol.subscribe(ref, this.meta);
+		this.protocol.subscribe(this.node, this.id, ref, this.meta);
 		return this.crdt.checkout(ref);
 	}
 
 	public fork(name?: string): string {
 		const ref = this.crdt.fork(name);
-		this.protocol.subscribe(ref, this.meta);
+		this.protocol.subscribe(this.node, this.id, ref, this.meta);
 		return ref;
 	}
 
@@ -109,7 +114,6 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 	}
 
 	public listRefs(): string[] {
-		// TODO needed for metadata setup
 		return this.protocol.listRefs(this.crdt, this.meta);
 	}
 
@@ -125,8 +129,8 @@ class ConnectedCRDTree<T = any> implements IConnectedCRDTree<T> {
 		return this.crdt.ref;
 	}
 
-	public serialize(): CRDTreeTransport<any> {
-		return this.crdt.serialize();
+	public serialize(ref?: string): CRDTreeTransport<any> {
+		return this.crdt.serialize(ref);
 	}
 }
 

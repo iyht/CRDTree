@@ -30,7 +30,7 @@ export default class State<T = any> {
 
 	constructor(changes: BackendChange[]) {
 		this._ref = ROOT;
-		this.branches = new Map();
+		this.branches = new Map([[ROOT, new Map()]]);
 		this._seen = new Set<ID>();
 		this.clock = 0;
 		this.reinitObjects();
@@ -313,12 +313,16 @@ export default class State<T = any> {
 		}
 	}
 
-	public listChanges(): BackendChange[] {
-		const changes = [];
-		for (const {stored, seen} of this.branches.values()) {
-			changes.push(...stored.values(), ...seen.values());
-		}
-		return changes;
+	public listChanges(ref?: string): BackendChange[] {
+		if (ref) {
+			return this.collect(ref);
+		} else {
+  		const changes = [];
+	  	for (const {stored, seen} of this.branches.values()) {
+		  	changes.push(...stored.values(), ...seen.values());
+      }
+      return changes;
+    }
 	}
 
 	public render(): T {

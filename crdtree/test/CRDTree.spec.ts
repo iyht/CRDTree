@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {Done} from "mocha";
-import {CRDTree} from "../src/CRDTree";
 import "./util/utils";
-import {ICRDTree} from "../src/API";
+import {CRDTree, ICRDTree} from "../src";
 import {FrontendPrimitive} from "../src/Primitive";
 import {readResource} from "./util/utils";
 
@@ -661,6 +660,10 @@ describe("CRDTree", () => {
 
 			it("should always use the same default ref", () => {
 				expect(new CRDTree()).to.be.on(tree.ref);
+			});
+
+			it("should have the main branch listed before commits are made", () => {
+				expect(new CRDTree().listRefs()).to.have.length(1);
 			});
 
 			it("should be able to fork", () => {
