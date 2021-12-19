@@ -19,8 +19,8 @@ const doTheThing = (j, i, kind, wait) =>
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 (async () => {
-	for (let j = 0; j < 3; j = j + 1) {
-		for (let i = 1; i <= 100; i = i + 1) {
+	for (let i = 1; i <= 100; i = i + 1) {
+		for (let j = 0; j < 3; j = j + 1) {
 			await doTheThing(j, i, 'basic', String(true));
 			await sleep(50);
 			await doTheThing(j, i, 'basic', "");
