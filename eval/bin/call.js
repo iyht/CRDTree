@@ -4,6 +4,11 @@ const {connectTo, initNetwork} = require("network/dist/src/Network");
 
 const args = process.argv.slice(2);
 
+process.on('SIGINT', () => {
+	console.log("exiting...");
+	process.exit(0);
+});
+
 let sent = false;
 let done = false;
 
