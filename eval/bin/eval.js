@@ -9,7 +9,7 @@ const doTheThing = (j, i, kind, wait) =>
 		let procLogs = "";
 		proc.stdout.on('data', (data) => {
 			procLogs += data.toString();
-			if (procLogs.length === 23 * 4 * i) {
+			if (procLogs.length >= 23 * 4 * i) {
 				proc.kill('SIGINT');
 				fs.writeFile(`${__dirname}/${j}-${kind}-${wait}-${i}.log`, procLogs, resolve);
 			}
