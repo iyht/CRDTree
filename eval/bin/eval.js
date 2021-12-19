@@ -22,13 +22,13 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 	for (let j = 0; j < 3; j = j + 1) {
 		for (let i = 1; i <= 100; i = i + 1) {
 			await doTheThing(j, i, 'basic', String(true));
-			await sleep(50 * i);
+			await sleep(50);
 			await doTheThing(j, i, 'basic', "");
-			await sleep(50 * i);
+			await sleep(50);
 			await doTheThing(j, i, 'recommended', String(true));
-			await sleep(50 * i);
+			await sleep(50);
 			await doTheThing(j, i, 'recommended', "");
-			await sleep(50 * i);
+			await sleep(50);
 			console.log("End iter", j, i);
 		}
 	}
