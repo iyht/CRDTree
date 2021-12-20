@@ -69,9 +69,9 @@ export default class State<T = any> {
 		changes.forEach((change: BackendChange) => {
 			const {action} = change;
 			if (isFork(action) || isJoin(action)) {
-				const recurrence = this.collectImpl(action.from, action.after);
-				recurrence.forEach((value, key) =>
-					backendChangeOutput.set(key, value));
+				this.collectImpl(action.from, action.after, backendChangeOutput);
+				// recurrence.forEach((value, key) =>
+				// 	backendChangeOutput.set(key, value));
 			}
 			backendChangeOutput.set(toID(change), change);
 		});
@@ -100,12 +100,13 @@ export default class State<T = any> {
 	}
 
 	private collect(ref?: string): BackendChange[] {
-		const changes = this.collectImpl(ref ?? this.ref(), this.latest(ref ?? this.ref()));
+		const changes = new Map<ID, BackendChange>();
+		this.collectImpl(ref ?? this.ref(), this.latest(ref ?? this.ref()), changes);
 		const listChanges = Array.from(changes.values());
 		return listChanges.sort(changeSortCompare);
 	}
 
-	private collectImpl(ref: string, after: ID): Map<ID, BackendChange> {
+	private collectImpl(ref: string, after: ID, collection: Map<ID, BackendChange>): void {
 		const {stored, seen} = this.branches.get(ref) ?? {
 			stored: new Map<ID, BackendChange>(),
 			seen: new Map<ID, BackendChange>()
@@ -117,17 +118,20 @@ export default class State<T = any> {
 			}
 			return changeID === after || nameLt(changeID, after)
 		});
-		const backendChangeOutput = new Map<ID, BackendChange>();
+		// const backendChangeOutput = new Map<ID, BackendChange>();
 		relevantChanges.forEach((change) => {
 			const {action} = change;
-			if (isFork(action) || isJoin(action)) {
-				const recurrence = this.collectImpl(action.from, action.after);
-				recurrence.forEach((value, key) =>
-					backendChangeOutput.set(key, value));
+			const id = toID(change);
+			if (!collection.has(id)) {
+				collection.set(id, change);
+				if (isFork(action) || isJoin(action)) {
+					this.collectImpl(action.from, action.after, collection);
+					// recurrence.forEach((value, key) =>
+					// 	backendChangeOutput.set(key, value));
+				}
 			}
-			backendChangeOutput.set(toID(change), change);
 		});
-		return backendChangeOutput;
+		// return backendChangeOutput;
 	}
 
 	public checkout(ref: string): void {
