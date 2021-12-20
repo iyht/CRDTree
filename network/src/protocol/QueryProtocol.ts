@@ -27,7 +27,7 @@ const requestHistory = (connection: Connection, branch?: string) => {
 	connection.newStream([PROTOCOL_PREFIX]).then(({stream}) => send(message, stream));
 };
 
-const requestHistoryAgain = (node: Libp2p, branch?: string, otherSubs: string[] = []) => {
+const requestHistoryAgain = async (node: Libp2p, branch?: string, otherSubs: string[] = []) => {
 	const peers = Array.from(node.peerStore.peers.values());
 	const peer = peers[Math.floor(Math.random() * peers.length)];
 	if (peer.protocols.includes(PROTOCOL_PREFIX) &&
