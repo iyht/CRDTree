@@ -9,6 +9,8 @@ process.on('SIGINT', () => {
 	process.exit(0);
 });
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 let sent = false;
 let done = false;
 
@@ -24,29 +26,33 @@ const pickCRDT = (kind, id) => {
 
 const bootstrapCRDT = (crdt, kind) => {
 	if (kind !== "connector") {
-		crdt.assign([], []);
+		// crdt.assign([], []);
 	}
 };
 
-const checkAndPrint = (render, id, numBeforeStart, numBeforeDone, crdt) => {
-	if (Array.isArray(render) && render.length >= Number(numBeforeStart) && sent === false) {
+const checkAndPrint = (crdt, id, numBeforeStart, numBeforeDone) => {
+	const count = crdt.crdt.state.branches.get("ROOT").seen.size;
+	if (count >= Number(numBeforeStart) && sent === false) {
 		console.log(">>>", id, Date.now());
-		crdt.insert([0], null);
+		crdt.assign([], null);
 		sent = true;
 	}
-	if (Array.isArray(render) && render.length >= Number(numBeforeDone) && done === false) {
+	if (count >= Number(numBeforeDone) && done === false) {
 		console.log("<<<", id, Date.now());
 		done = true;
 	}
 };
 
 (async () => {
-	const [kind, id, numBeforeStart, numBeforeDone] = args;
+	const [kind, id, numBeforeStart, numBeforeDone, delay] = args;
+	await sleep(Number(delay) * Number(id));
 	console.log("...", id, Date.now());
+	const beforePick = Date.now();
 	const crdt = await pickCRDT(kind, id);
+	const pickTime = Date.now() - beforePick;
+	await sleep(((Number(numBeforeDone) - Number(id)) * Number(delay)) - pickTime);
 	console.log("!!!", id, Date.now());
-	crdt.onUpdate((render) => checkAndPrint(render, id, numBeforeStart, numBeforeDone, crdt));
-	const render = crdt.render;
-	checkAndPrint(render, id, numBeforeStart, numBeforeDone, crdt);
+	crdt.onUpdate((render) => checkAndPrint(crdt, id, numBeforeStart, numBeforeDone));
+	checkAndPrint(crdt, id, numBeforeStart, numBeforeDone);
 	bootstrapCRDT(crdt, kind);
 })();
