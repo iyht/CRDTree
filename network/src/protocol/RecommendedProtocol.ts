@@ -140,7 +140,7 @@ const protocol: Protocol = {
 		const meta = new CRDTree(history);
 		node.handle(META_PREFIX, handle(meta));
 		meta.onUpdate((updates) => {
-			discoverPeers(node, meta);
+			// discoverPeers(node, meta);
 			node.peerStore.peers.forEach((peer) => {
 				node.connectionManager.get(peer.id)?.newStream([META_PREFIX])
 					.then(send(updates));
