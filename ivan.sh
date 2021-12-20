@@ -10,7 +10,7 @@ cd ../eval && yarn link crdtree && yarn link network && yarn install || (echo "F
 
 echo "Done with eval installation"
 
-node bin/eval
-
-mkdir ../out || echo "Tried to make an output directory. I hope that worked"
-mv bin/*.log ../out
+#node bin/eval
+#
+#mkdir ../out || echo "Tried to make an output directory. I hope that worked"
+#mv bin/*.log ../out
