@@ -1,15 +1,16 @@
 const {spawn} = require("child_process");
 const fs = require("fs");
 
-const doTheThing = (j, i, kind, wait) =>
+const doTheThing = (j, i, kind) =>
 	new Promise((resolve) => {
-		const spawnArgs = ['bin/spawn', i, kind, wait];
+		// const spawnArgs = ['bin/spawn', i, kind, wait];
+		const spawnArgs = ['bin/recur', ("00" + (i - 1)).slice(-3), kind, i];
 		console.log('node', ...spawnArgs);
 		const proc = spawn('node', spawnArgs);
 		let procLogs = "";
 		const finish = () => {
 			proc.kill('SIGINT');
-			fs.writeFile(`${__dirname}/${i}-${j}-${kind}-${wait}.log`, procLogs, resolve);
+			fs.writeFile(`${__dirname}/${i}-${j}-${kind}.log`, procLogs, resolve);
 		};
 		const timeout = setTimeout(finish, 5000 * i);
 		proc.stdout.on('data', (data) => {
@@ -28,11 +29,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 (async () => {
 	for (let i = 1; i <= 100; i = i + 1) {
 		for (let j = 0; j < 3; j = j + 1) {
-			await doTheThing(j, i, 'basic', String(true));
+			// await doTheThing(j, i, 'basic', String(true));
 			await sleep(100);
 			await doTheThing(j, i, 'basic', "");
 			await sleep(100);
-			await doTheThing(j, i, 'recommended', String(true));
+			// await doTheThing(j, i, 'recommended', String(true));
 			await sleep(100);
 			await doTheThing(j, i, 'recommended', "");
 			await sleep(100);
