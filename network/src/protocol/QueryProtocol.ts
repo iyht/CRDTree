@@ -53,6 +53,7 @@ const handleQueryAfterBootstrapped = (crdt: ConnectedCRDTree) =>
 						history: crdt.serialize(query.branch),
 						metaHistory: crdt.serializeProtocol(),
 					};
+					// TODO it should be my job to add the remote node to the meta. This prevents a race condition
 					connection.newStream([PROTOCOL_PREFIX]).then(({stream}) => send(queryMessage, stream));
 				} else {
 					crdt.merge(query?.history ?? []);
