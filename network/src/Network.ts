@@ -24,7 +24,7 @@ const newNode = (knownPeers: string[] = []): Promise<Libp2p> =>
 			transport: [TCP],
 			streamMuxer: [MPLEX],
 			connEncryption: [NOISE],
-			peerDiscovery: knownPeers.length === 0 ? [MulticastDNS] : [MulticastDNS], // TODO add back the Bootstrap
+			peerDiscovery: knownPeers.length === 0 ? [MulticastDNS] : [Bootstrap, MulticastDNS],
 		},
 		config: {
 			peerDiscovery: {
