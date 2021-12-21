@@ -36,6 +36,21 @@ Requirements for Milestone 2 include:
 This milestone contained quite a few tricky bugs (including some that really should have been exposed during Milestone 2).
 All of them can be seen in [the new tests added during this development period](https://github.com/Haotian-Yang/CPSC538B-Project/commits/main/crdtree/test/CRDTree.spec.ts).
 
+## "Milestone 4"
+- **FR1**: Should be able to connect to other users
+  - Largely handled by [`libp2p`](./network/src/Network.ts) 
+- **FR2**: Should be able to calculate processes that are subscribed to an operation
+  - This works! Can be seen in the [recommended network protocol](./network/src/protocol/RecommendedProtocol.ts)
+- **FR3**: Should send new operations to processes on the same fork
+  - This works! Can be seen in the [recommended network protocol](./network/src/protocol/RecommendedProtocol.ts)
+- **FR4**: Should not send new operations to processes not on the same fork
+  - This works! Can be seen in the [recommended network protocol](./network/src/protocol/RecommendedProtocol.ts) 
+- **NFR1**: Should have a complete test suite for the CRDTree Protocol Library
+  - A _reasonable_ test suite can be seen [in the network package](./network/test) 
+
+The functional requirements of this milestone can be evaluated by running `yarn test` in the [network directory](./network)
+
+
 
 ## Development
 ### Requirements
