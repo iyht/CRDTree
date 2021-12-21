@@ -115,15 +115,22 @@ const protocol: Protocol = {
 	kind: ProtocolKind.RECOMMENDED,
 	broadcast: async (node: Libp2p, updates: CRDTreeTransport<unknown>, meta: ICRDTree): Promise<void> => {
 		// TODO clear any pending updates for the meta data
+		const subUpdates = new Map<string, CRDTreeTransport<unknown>>();
 		updates.forEach((update) => {
-			const ids = getSubscribers(meta.render?.subscribers ?? {}, update.branch, update);
-			ids.forEach((id) => {
-				if (node.peerStore.peers.has(id)) {
-					const peer = node.peerStore.peers.get(id);
-					node.connectionManager.get(peer.id)?.newStream([PROTOCOL_PREFIX])
-						.then(send([update]));
-				}
-			});
+			getSubscribers(meta.render?.subscribers ?? {}, update.branch, update)
+				.forEach((id) => {
+					if (!subUpdates.has(id)) {
+						subUpdates.set(id, []);
+					}
+					subUpdates.get(id).push(update);
+				});
+		});
+		subUpdates.forEach((updates, id) => {
+			if (node.peerStore.peers.has(id)) {
+				const peer = node.peerStore.peers.get(id);
+				node.connectionManager.get(peer.id)?.newStream([PROTOCOL_PREFIX])
+					.then(send(updates));
+			}
 		});
 	},
 	listRefs(_: ICRDTree, meta: ICRDTree): string[] {
