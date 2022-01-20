@@ -7,6 +7,7 @@ import {IConnectedCRDTree} from "network/dist/src/ConnectedCRDTree";
 import {initNetwork, connectTo} from "network/dist/src/Network";
 import {ICRDTree} from "crdtree/src";
 import open from "open";
+import {render} from "crdtree/dist/src/Renderer";
 
 const app = express();
 const server = http.createServer(app);
@@ -38,26 +39,32 @@ webSocketServer.on('connection', (webSocket: WebSocket) => {
 		render: crdt?.render,
 		addresses: crdt?.addresses,
 		name: crdt?.render.names[crdt.id],
+		branches: crdt?.listRefs(),
+		ref: crdt?.ref
 	}));
 
 	webSocket.on('message', async (data) => {
 		const message = JSON.parse(data.toString());
 		if (message.kind === "start") {
 			crdt = await initNetwork();
-			crdt.onUpdate((render) =>
-				send({render, addresses: crdt.addresses, name: crdt.render.names[crdt.id]}));
+			crdt.onUpdate(() => send(crdt));
 			bootstrap(crdt);
 			setName(crdt, crdt.id, crdt.id.slice(-7));
 		} else if (message.kind === "connect") {
 			const address = message.data;
 			crdt = await connectTo([address]);
-			crdt.onUpdate((render) =>
-				send({render, addresses: crdt.addresses, name: crdt.render.names[crdt.id]}));
+			crdt.onUpdate(() => send(crdt));
 			setName(crdt, crdt.id, crdt.id.slice(-7));
 		} else if (message.kind === "rename") {
 			setName(crdt, crdt.id, message.data);
 		} else if (message.kind === "message") {
 			addMessage(crdt, crdt.id, message.data);
+		} else if (message.kind === "fork") {
+			crdt.fork();
+		} else if (message.kind === "checkout") {
+			const branch = message.data;
+			crdt.checkout(branch);
+			send(crdt)
 		}
 	});
 });
@@ -79,7 +86,9 @@ const bootstrap = (crdt: ICRDTree) => {
 	crdt.assign(["messages"], []);
 };
 
-const send = debounce((data) => {
+const send = debounce((crdt) => {
+	const data = {render: crdt.render, addresses: crdt.addresses,
+		name: crdt.render.names[crdt.id], branches: crdt.listRefs(), ref: crdt.ref}
 	webSocketServer.clients.forEach((client) => {
 		if (client.readyState === WebSocket.OPEN) {
 			client.send(JSON.stringify(data));

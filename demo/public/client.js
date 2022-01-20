@@ -3,6 +3,8 @@ const input = document.querySelector('#message');
 input.disabled = true;
 const name = document.querySelector('#name');
 const address = document.querySelector('h3');
+const branches = document.querySelector('#branch');
+const fork = document.querySelector('#fork');
 
 const webSocket = new WebSocket(`ws://${location.host}`);
 
@@ -28,6 +30,8 @@ webSocket.addEventListener('open', function(e) {
 			textarea.value = renderMessages(data.render);
 			input.disabled = !Array.isArray(data.render.messages);
 			textarea.scrollTop = textarea.scrollHeight;
+			branches.innerHTML = data.branches.map(b => `<option value="${b}">${b}</option>`);
+			branches.selectedIndex = data.branches.findIndex((b) => b === data.ref);
 		}
 	});
 
@@ -40,5 +44,13 @@ webSocket.addEventListener('open', function(e) {
 	name.addEventListener('change', function (e) {
 		send("rename", name.value);
 		name.value = "";
+	});
+
+	fork.addEventListener('click', function (e) {
+		send("fork");
+	});
+
+	branches.addEventListener('change', function (e) {
+		send("checkout", branches.options.item(branches.selectedIndex).value);
 	});
 });
